@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+
+  /* Update card colors to be darker and more consistent */
+  --card: 225 32% 10%;
+  --card-foreground: 210 40% 98%;
+
+  --popover: 222.2 84% 4.9%;
+  --popover-foreground: 210 40% 98%;
+
+  /* Update primary colors to use cyan */
+  --primary: 199 89% 48%;
+  --primary-foreground: 0 0% 100%;
+
+  /* Darker secondary colors */
+  --secondary: 217.2 32.6% 12%;
+  --secondary-foreground: 210 40% 98%;
+
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+
+  --accent: 217.2 32.6% 17.5%;
+  --accent-foreground: 210 40% 98%;
+
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 40% 98%;
+
+  /* Subtle borders */
+  --border: 217.2 32.6% 13%;
+  --input: 217.2 32.6% 17.5%;
+  --ring: 212.7 26.8% 83.9%;
+
+  --radius: 0.5rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    background: linear-gradient(to bottom, #0b1120, #0a0f1c);
+  }
+}
+
+/* Custom utility classes */
+.bg-card-dark {
+  background-color: #0d1425;
+}
+
+.border-card-dark {
+  border-color: rgba(59, 130, 246, 0.1);
+}
+
+.text-accent-blue {
+  color: #3b82f6;
+}
+
+.text-accent-cyan {
+  color: #22d3ee;
+}
+
