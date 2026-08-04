@@ -192,44 +192,6 @@ export default function Home() {
     }
   }, [])
 
-  useEffect(() => {
-    const urlParam = searchParams.get("url")
-    if (urlParam) {
-      const sanitizedUrl = sanitizeUrl(urlParam)
-      if (sanitizedUrl !== url) {
-        resetState()
-        setUrl(sanitizedUrl)
-        setActiveUrl(sanitizedUrl)
-        setIsVisible(true)
-        setShowInput(false)
-        fetchAboutData(sanitizedUrl)
-        fetchEthereumRpcData(sanitizedUrl)
-      }
-    } else {
-      resetState()
-    }
-  }, [searchParams, resetState, url])
-
-  const fetchAboutData = async (url: string) => {
-    try {
-      const response = await fetch(`${url}/api/v1/about/`)
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      const data: AboutData = await response.json()
-      setAboutData(data)
-      setLastFetched(new Date())
-
-      // If tracing RPC URL is set, fetch its data
-      if (data.settings.ETHEREUM_TRACING_NODE_URL) {
-        fetchTracingRpcData(url)
-      }
-    } catch (error) {
-      console.error("Error fetching about data:", error)
-      setError(`Failed to fetch about data: ${error instanceof Error ? error.message : "Unknown error"}`)
-    }
-  }
-
   const fetchEthereumRpcData = useCallback(async (url: string) => {
     if (isRpcFetchingRef.current) {
       return
@@ -273,6 +235,44 @@ export default function Home() {
       isTracingRpcFetchingRef.current = false
     }
   }, [])
+
+  const fetchAboutData = useCallback(async (url: string) => {
+    try {
+      const response = await fetch(`${url}/api/v1/about/`)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      const data: AboutData = await response.json()
+      setAboutData(data)
+      setLastFetched(new Date())
+
+      // If tracing RPC URL is set, fetch its data
+      if (data.settings.ETHEREUM_TRACING_NODE_URL) {
+        fetchTracingRpcData(url)
+      }
+    } catch (error) {
+      console.error("Error fetching about data:", error)
+      setError(`Failed to fetch about data: ${error instanceof Error ? error.message : "Unknown error"}`)
+    }
+  }, [fetchTracingRpcData])
+
+  useEffect(() => {
+    const urlParam = searchParams.get("url")
+    if (urlParam) {
+      const sanitizedUrl = sanitizeUrl(urlParam)
+      if (sanitizedUrl !== url) {
+        resetState()
+        setUrl(sanitizedUrl)
+        setActiveUrl(sanitizedUrl)
+        setIsVisible(true)
+        setShowInput(false)
+        fetchAboutData(sanitizedUrl)
+        fetchEthereumRpcData(sanitizedUrl)
+      }
+    } else {
+      resetState()
+    }
+  }, [searchParams, resetState, url, fetchAboutData, fetchEthereumRpcData])
 
   useEffect(() => {
     if (!activeUrl) return

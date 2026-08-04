@@ -7,9 +7,6 @@ import { PanelLeft } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 
-const SIDEBAR_WIDTH = "16rem"
-const SIDEBAR_WIDTH_COLLAPSED = "4rem"
-
 type SidebarContext = {
   expanded: boolean
   setExpanded: (expanded: boolean) => void
