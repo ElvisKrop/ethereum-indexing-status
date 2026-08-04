@@ -23,13 +23,19 @@ interface SidebarLinkProps {
   onClick?: () => void
 }
 
-// Create a context to share mobile sidebar state
+// Create a context to share sidebar state between the desktop and mobile sidebars
 export const MobileSidebarContext = React.createContext<{
   openMobile: boolean
   setOpenMobile: React.Dispatch<React.SetStateAction<boolean>>
+  activeSection: string
+  hasActiveUrl: boolean
+  hasTracingRpc: boolean
 }>({
   openMobile: false,
   setOpenMobile: () => {},
+  activeSection: "",
+  hasActiveUrl: false,
+  hasTracingRpc: false,
 })
 
 // Custom hook for mobile sidebar
@@ -96,7 +102,7 @@ const SidebarLink = ({ icon: Icon, label, targetId, isActive, onClick }: Sidebar
 
 // Update the AppSidebar component to always show links when content is loaded
 export function AppSidebar() {
-  const [activeSection, setActiveSection] = React.useState<string>("")
+  const { activeSection, hasActiveUrl, hasTracingRpc } = useMobileSidebar()
 
   return (
     <Sidebar className="p-2">
@@ -114,7 +120,7 @@ export function AppSidebar() {
       <SidebarContent className="sticky top-0 px-2">
         <div className="px-3 py-2 text-xs font-semibold text-cyan-600 uppercase tracking-wider">Navigation</div>
         <SidebarMenu className="space-y-1">
-          {!SidebarWrapper.hasActiveUrl ? (
+          {!hasActiveUrl ? (
             <div className="px-3 py-4 text-sm text-slate-400 bg-slate-800/20 rounded-md">
               Enter a transaction service URL to view available sections
             </div>
@@ -138,7 +144,7 @@ export function AppSidebar() {
                 targetId="rpc-status"
                 isActive={activeSection === "rpc-status"}
               />
-              {SidebarWrapper.hasTracingRpc && (
+              {hasTracingRpc && (
                 <SidebarLink
                   icon={Server}
                   label="Tracing RPC Status"
@@ -267,11 +273,8 @@ export function SidebarWrapper({ children }: { children: React.ReactNode }) {
     }
   }, [openMobile])
 
-  SidebarWrapper.hasActiveUrl = hasActiveUrl
-  SidebarWrapper.hasTracingRpc = hasTracingRpc
-
   return (
-    <MobileSidebarContext.Provider value={{ openMobile, setOpenMobile }}>
+    <MobileSidebarContext.Provider value={{ openMobile, setOpenMobile, activeSection, hasActiveUrl, hasTracingRpc }}>
       <div className="flex min-h-screen">
         <div className="hidden md:block">
           <SidebarProvider>
