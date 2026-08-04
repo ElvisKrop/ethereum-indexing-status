@@ -1,22 +1,23 @@
 "use client"
 
-import { useEffect, useState, useCallback, useRef } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { Line } from "react-chartjs-2"
 import {
-  Chart as ChartJS,
   CategoryScale,
+  Chart as ChartJS,
+  Legend,
   LinearScale,
-  PointElement,
   LineElement,
+  PointElement,
   Title,
   Tooltip,
-  Legend,
 } from "chart.js"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
-import { Clock, CheckCircle, InfoIcon, ChevronDown, ChevronUp, LineChart } from "lucide-react"
+import { CheckCircle, ChevronDown, ChevronUp, Clock, InfoIcon, LineChart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { CurrentData } from "@/app/page";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend)
 
@@ -67,7 +68,7 @@ const calculateETA = (blocksLeft: number, speed: number): string => {
 
 interface IndexingStatusProps {
   baseUrl: string
-  onDataUpdate: (data: any) => void
+  onDataUpdate: (data: CurrentData) => void
 }
 
 export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatusProps) {
@@ -78,8 +79,6 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
   const [erc20ETA, setErc20ETA] = useState<string>("N/A")
   const [masterCopiesETA, setMasterCopiesETA] = useState<string>("N/A")
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
-  const [erc20BlockHistory, setErc20BlockHistory] = useState<number[]>([])
-  const [masterCopiesBlockHistory, setMasterCopiesBlockHistory] = useState<number[]>([])
   const [showErc20Warning, setShowErc20Warning] = useState(false)
   const [showMasterCopiesWarning, setShowMasterCopiesWarning] = useState(false)
   const [showErc20Chart, setShowErc20Chart] = useState(false)
@@ -88,6 +87,13 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
 
   const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const isFetchingRef = useRef(false)
+  const erc20BlockHistoryRef = useRef<number[]>([])
+  const masterCopiesBlockHistoryRef = useRef<number[]>([])
+  const onDataUpdateRef = useRef(onDataUpdate)
+
+  useEffect(() => {
+    onDataUpdateRef.current = onDataUpdate
+  }, [onDataUpdate])
 
   const fetchData = useCallback(async () => {
     if (isFetchingRef.current) {
@@ -103,19 +109,23 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
       const newData: IndexingData = await response.json()
       const dataWithTimestamp = { ...newData, timestamp: Date.now() }
 
-      setErc20BlockHistory((prev) => {
-        const newHistory = [dataWithTimestamp.erc20BlockNumber, ...prev].slice(0, STALL_THRESHOLD)
-        const isStalled = newHistory.length === STALL_THRESHOLD && newHistory.every((val) => val === newHistory[0])
-        setShowErc20Warning(isStalled)
-        return newHistory
-      })
+      erc20BlockHistoryRef.current = [dataWithTimestamp.erc20BlockNumber, ...erc20BlockHistoryRef.current].slice(
+        0,
+        STALL_THRESHOLD,
+      )
+      setShowErc20Warning(
+        erc20BlockHistoryRef.current.length === STALL_THRESHOLD &&
+          erc20BlockHistoryRef.current.every((val) => val === erc20BlockHistoryRef.current[0]),
+      )
 
-      setMasterCopiesBlockHistory((prev) => {
-        const newHistory = [dataWithTimestamp.masterCopiesBlockNumber, ...prev].slice(0, STALL_THRESHOLD)
-        const isStalled = newHistory.length === STALL_THRESHOLD && newHistory.every((val) => val === newHistory[0])
-        setShowMasterCopiesWarning(isStalled)
-        return newHistory
-      })
+      masterCopiesBlockHistoryRef.current = [
+        dataWithTimestamp.masterCopiesBlockNumber,
+        ...masterCopiesBlockHistoryRef.current,
+      ].slice(0, STALL_THRESHOLD)
+      setShowMasterCopiesWarning(
+        masterCopiesBlockHistoryRef.current.length === STALL_THRESHOLD &&
+          masterCopiesBlockHistoryRef.current.every((val) => val === masterCopiesBlockHistoryRef.current[0]),
+      )
 
       setData((prevData) => {
         const now = Date.now()
@@ -136,7 +146,7 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
           setErc20ETA(newErc20ETA)
           setMasterCopiesETA(newMasterCopiesETA)
 
-          onDataUpdate({
+          onDataUpdateRef.current({
             erc20: {
               blocksLeft: erc20BlocksLeft,
               speed: newErc20Speed,
@@ -276,7 +286,7 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
             size: 12,
           },
           padding: 8,
-          callback: (value: number) => `${value.toLocaleString()}`,
+          callback: (value: string | number) => Number(value).toLocaleString(),
         },
         border: {
           display: false,
@@ -328,13 +338,13 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
   const toggleMasterCopiesChart = () => setShowMasterCopiesChart((prev) => !prev)
 
   const TimestampDisplay = ({
-    lastUpdated,
-    countdown,
-    className,
-  }: { lastUpdated: Date; countdown: number; className?: string }) => (
+                              lastUpdated,
+                              countdown,
+                              className,
+                            }: { lastUpdated: Date; countdown: number; className?: string }) => (
     <div className={cn("text-xs sm:text-sm flex items-center gap-2 flex-wrap", className)}>
       <div className="flex items-center">
-        <Clock className="w-4 h-4 mr-1.5 animate-pulse" />
+        <Clock className="w-4 h-4 mr-1.5 animate-pulse"/>
         <span>Last updated: {lastUpdated.toLocaleTimeString()}</span>
       </div>
       <span className="opacity-70">(Next update in {countdown}s)</span>
@@ -350,7 +360,7 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
 
   const SyncedMessage = ({ type }: { type: "ERC20" | "Master Copies" }) => (
     <div className="flex items-center justify-center space-x-2 text-lg font-medium">
-      <CheckCircle className="w-6 h-6 text-green-500" />
+      <CheckCircle className="w-6 h-6 text-green-500"/>
       <span className="text-green-400">{type} tokens are fully synchronized with the latest block.</span>
     </div>
   )
@@ -358,7 +368,7 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="bg-blue-900/20 border border-blue-500/50 rounded-lg p-3 sm:p-4 flex items-start space-x-3">
-        <InfoIcon className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400 flex-shrink-0 mt-0.5" />
+        <InfoIcon className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400 flex-shrink-0 mt-0.5"/>
         <p className="text-xs sm:text-sm text-blue-200">
           Data is stored for the last hour only. Speeds and ETAs are calculated based on this time frame.
         </p>
@@ -376,7 +386,7 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
         </CardHeader>
         <CardContent className="space-y-4 p-4">
           {latestData.erc20Synced ? (
-            <SyncedMessage type="ERC20" />
+            <SyncedMessage type="ERC20"/>
           ) : (
             <>
               <div className="flex justify-between items-center">
@@ -386,16 +396,16 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
                   size="sm"
                   className="text-cyan-400 hover:text-cyan-300 hover:border-cyan-500 ml-auto flex items-center gap-2"
                 >
-                  <LineChart className="h-4 w-4" />
+                  <LineChart className="h-4 w-4"/>
                   {showErc20Chart ? (
                     <>
                       Hide Speed Chart
-                      <ChevronUp className="h-4 w-4" />
+                      <ChevronUp className="h-4 w-4"/>
                     </>
                   ) : (
                     <>
                       Show Speed Chart
-                      <ChevronDown className="h-4 w-4" />
+                      <ChevronDown className="h-4 w-4"/>
                     </>
                   )}
                 </Button>
@@ -405,9 +415,11 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
                   Click the button above to view the historical indexing speed chart
                 </p>
               )}
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-900/20 rounded-lg border border-gray-800/50">
+              <div
+                className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-900/20 rounded-lg border border-gray-800/50">
                 <div className="text-center group">
-                  <div className="text-base sm:text-lg font-medium text-cyan-400/80 group-hover:text-cyan-400 transition-colors">
+                  <div
+                    className="text-base sm:text-lg font-medium text-cyan-400/80 group-hover:text-cyan-400 transition-colors">
                     Blocks Left
                   </div>
                   <div className="text-xl sm:text-3xl font-bold text-cyan-300 tabular-nums">
@@ -415,7 +427,8 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
                   </div>
                 </div>
                 <div className="text-center group">
-                  <div className="text-base sm:text-lg font-medium text-cyan-400/80 group-hover:text-cyan-400 transition-colors">
+                  <div
+                    className="text-base sm:text-lg font-medium text-cyan-400/80 group-hover:text-cyan-400 transition-colors">
                     Current Speed
                   </div>
                   <div className="text-xl sm:text-3xl font-bold text-cyan-300 tabular-nums">
@@ -424,7 +437,8 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
                   </div>
                 </div>
                 <div className="text-center group">
-                  <div className="text-base sm:text-lg font-medium text-cyan-400/80 group-hover:text-cyan-400 transition-colors">
+                  <div
+                    className="text-base sm:text-lg font-medium text-cyan-400/80 group-hover:text-cyan-400 transition-colors">
                     Indexed Blocks
                   </div>
                   <div className="text-xl sm:text-3xl font-bold text-cyan-300 tabular-nums">
@@ -432,7 +446,8 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
                   </div>
                 </div>
                 <div className="text-center group">
-                  <div className="text-base sm:text-lg font-medium text-cyan-400/80 group-hover:text-cyan-400 transition-colors">
+                  <div
+                    className="text-base sm:text-lg font-medium text-cyan-400/80 group-hover:text-cyan-400 transition-colors">
                     Latest Block
                   </div>
                   <div className="text-xl sm:text-3xl font-bold text-cyan-300 tabular-nums">
@@ -440,7 +455,8 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
                   </div>
                 </div>
                 <div className="text-center group">
-                  <div className="text-base sm:text-lg font-medium text-cyan-400/80 group-hover:text-cyan-400 transition-colors">
+                  <div
+                    className="text-base sm:text-lg font-medium text-cyan-400/80 group-hover:text-cyan-400 transition-colors">
                     ETA
                   </div>
                   <div className="text-xl sm:text-3xl font-bold text-cyan-300 tabular-nums">{erc20ETA}</div>
@@ -452,7 +468,8 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
                 indicatorClassName="bg-gradient-to-r from-cyan-500 to-cyan-400 animate-pulse"
               />
               {showErc20Warning && (
-                <div className="bg-amber-900/50 border border-amber-500/50 text-amber-200 px-4 py-2 rounded-md flex items-center">
+                <div
+                  className="bg-amber-900/50 border border-amber-500/50 text-amber-200 px-4 py-2 rounded-md flex items-center">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     className="h-5 w-5 mr-2"
@@ -472,8 +489,9 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
                 </div>
               )}
               {showErc20Chart && (
-                <div className="h-[250px] bg-gray-900/20 rounded-lg border border-gray-800/50 p-4 animate-in fade-in duration-500">
-                  <Line data={createChartData(true)} options={chartOptions} />
+                <div
+                  className="h-[250px] bg-gray-900/20 rounded-lg border border-gray-800/50 p-4 animate-in fade-in duration-500">
+                  <Line data={createChartData(true)} options={chartOptions}/>
                 </div>
               )}
             </>
@@ -493,7 +511,7 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
         </CardHeader>
         <CardContent className="space-y-4 p-4">
           {latestData.masterCopiesSynced ? (
-            <SyncedMessage type="Master Copies" />
+            <SyncedMessage type="Master Copies"/>
           ) : (
             <>
               <div className="flex justify-between items-center">
@@ -503,16 +521,16 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
                   size="sm"
                   className="text-fuchsia-400 hover:text-fuchsia-300 hover:border-fuchsia-500 ml-auto flex items-center gap-2"
                 >
-                  <LineChart className="h-4 w-4" />
+                  <LineChart className="h-4 w-4"/>
                   {showMasterCopiesChart ? (
                     <>
                       Hide Speed Chart
-                      <ChevronUp className="h-4 w-4" />
+                      <ChevronUp className="h-4 w-4"/>
                     </>
                   ) : (
                     <>
                       Show Speed Chart
-                      <ChevronDown className="h-4 w-4" />
+                      <ChevronDown className="h-4 w-4"/>
                     </>
                   )}
                 </Button>
@@ -522,9 +540,11 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
                   Click the button above to view the historical indexing speed chart
                 </p>
               )}
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-900/20 rounded-lg border border-gray-800/50">
+              <div
+                className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-900/20 rounded-lg border border-gray-800/50">
                 <div className="text-center group">
-                  <div className="text-base sm:text-lg font-medium text-fuchsia-400/80 group-hover:text-fuchsia-400 transition-colors">
+                  <div
+                    className="text-base sm:text-lg font-medium text-fuchsia-400/80 group-hover:text-fuchsia-400 transition-colors">
                     Blocks Left
                   </div>
                   <div className="text-xl sm:text-3xl font-bold text-fuchsia-300 tabular-nums">
@@ -532,7 +552,8 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
                   </div>
                 </div>
                 <div className="text-center group">
-                  <div className="text-base sm:text-lg font-medium text-fuchsia-400/80 group-hover:text-fuchsia-400 transition-colors">
+                  <div
+                    className="text-base sm:text-lg font-medium text-fuchsia-400/80 group-hover:text-fuchsia-400 transition-colors">
                     Current Speed
                   </div>
                   <div className="text-xl sm:text-3xl font-bold text-fuchsia-300 tabular-nums">
@@ -541,7 +562,8 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
                   </div>
                 </div>
                 <div className="text-center group">
-                  <div className="text-base sm:text-lg font-medium text-fuchsia-400/80 group-hover:text-fuchsia-400 transition-colors">
+                  <div
+                    className="text-base sm:text-lg font-medium text-fuchsia-400/80 group-hover:text-fuchsia-400 transition-colors">
                     Indexed Blocks
                   </div>
                   <div className="text-xl sm:text-3xl font-bold text-fuchsia-300 tabular-nums">
@@ -549,7 +571,8 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
                   </div>
                 </div>
                 <div className="text-center group">
-                  <div className="text-base sm:text-lg font-medium text-fuchsia-400/80 group-hover:text-fuchsia-400 transition-colors">
+                  <div
+                    className="text-base sm:text-lg font-medium text-fuchsia-400/80 group-hover:text-fuchsia-400 transition-colors">
                     Latest Block
                   </div>
                   <div className="text-xl sm:text-3xl font-bold text-fuchsia-300 tabular-nums">
@@ -557,7 +580,8 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
                   </div>
                 </div>
                 <div className="text-center group">
-                  <div className="text-base sm:text-lg font-medium text-fuchsia-400/80 group-hover:text-fuchsia-400 transition-colors">
+                  <div
+                    className="text-base sm:text-lg font-medium text-fuchsia-400/80 group-hover:text-fuchsia-400 transition-colors">
                     ETA
                   </div>
                   <div className="text-xl sm:text-3xl font-bold text-fuchsia-300 tabular-nums">{masterCopiesETA}</div>
@@ -569,7 +593,8 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
                 indicatorClassName="bg-gradient-to-r from-fuchsia-500 to-fuchsia-400 animate-pulse"
               />
               {showMasterCopiesWarning && (
-                <div className="bg-amber-900/50 border border-amber-500/50 text-amber-200 px-4 py-2 rounded-md flex items-center">
+                <div
+                  className="bg-amber-900/50 border border-amber-500/50 text-amber-200 px-4 py-2 rounded-md flex items-center">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     className="h-5 w-5 mr-2"
@@ -589,8 +614,9 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
                 </div>
               )}
               {showMasterCopiesChart && (
-                <div className="h-[250px] bg-gray-900/20 rounded-lg border border-gray-800/50 p-4 animate-in fade-in duration-500">
-                  <Line data={createChartData(false)} options={chartOptions} />
+                <div
+                  className="h-[250px] bg-gray-900/20 rounded-lg border border-gray-800/50 p-4 animate-in fade-in duration-500">
+                  <Line data={createChartData(false)} options={chartOptions}/>
                 </div>
               )}
             </>
