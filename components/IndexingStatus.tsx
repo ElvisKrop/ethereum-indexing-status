@@ -17,54 +17,17 @@ import { Progress } from "@/components/ui/progress"
 import { CheckCircle, ChevronDown, ChevronUp, Clock, InfoIcon, LineChart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { CurrentData } from "@/app/page";
+import { CurrentData } from "@/lib/types"
+import {
+  calculateETA,
+  calculateRollingSpeed,
+  IndexingData,
+  ONE_HOUR,
+  REFETCH_INTERVAL,
+  STALL_THRESHOLD,
+} from "@/lib/indexing-metrics"
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend)
-
-const STALL_THRESHOLD = 10
-const REFETCH_INTERVAL = 10 * 1000 // 10 seconds in milliseconds
-const ONE_HOUR = 60 * 60 * 1000 // 1 hour in milliseconds
-
-interface IndexingData {
-  currentBlockNumber: number
-  erc20BlockNumber: number
-  erc20Synced: boolean
-  masterCopiesBlockNumber: number
-  masterCopiesSynced: boolean
-  synced: boolean
-  timestamp: number
-}
-
-const calculateRollingSpeed = (data: IndexingData[], isERC20: boolean) => {
-  if (data.length < 2) return 0
-
-  const now = data[0].timestamp
-  const oneHourAgo = now - ONE_HOUR
-
-  // Find the oldest data point within the last hour
-  const oldestIndex = data.findIndex((d) => d.timestamp < oneHourAgo)
-  const oldestPoint = oldestIndex === -1 ? data[data.length - 1] : data[oldestIndex]
-
-  const blockDiff = isERC20
-    ? data[0].erc20BlockNumber - oldestPoint.erc20BlockNumber
-    : data[0].masterCopiesBlockNumber - oldestPoint.masterCopiesBlockNumber
-
-  const timeDiff = (data[0].timestamp - oldestPoint.timestamp) / 1000 / 60 // Convert to minutes
-  return blockDiff / timeDiff
-}
-
-const calculateETA = (blocksLeft: number, speed: number): string => {
-  if (speed <= 0) return "N/A"
-
-  const minutes = blocksLeft / speed
-  if (minutes < 60) {
-    return `${Math.round(minutes)} minutes`
-  } else if (minutes < 1440) {
-    return `${Math.round(minutes / 60)} hours`
-  } else {
-    return `${Math.round(minutes / 1440)} days`
-  }
-}
 
 interface IndexingStatusProps {
   baseUrl: string
