@@ -12,25 +12,47 @@ export interface ServiceSummaryMetric {
 }
 
 export interface ServiceSummary {
+  // "error" only means the indexing endpoint has never returned data at all.
+  // A transient failure after a prior success keeps status "ok" with `error` set,
+  // so the row keeps showing its last-known-good data instead of going blank.
   status: "loading" | "ok" | "error"
   error: string | null
   aboutData: AboutData | null
+  aboutError: string | null
   erc20: ServiceSummaryMetric | null
   masterCopies: ServiceSummaryMetric | null
   rpcSynced: boolean | null
+  rpcError: string | null
   currentBlockNumber: number | null
   lastUpdated: Date | null
+}
+
+const messageOf = (reason: unknown): string => (reason instanceof Error ? reason.message : "Unknown error")
+
+const fetchJson = async (url: string) => {
+  const response = await fetch(url)
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`)
+  }
+  return response.json()
 }
 
 // Lightweight per-service poller for the multi-service table: keeps only a short
 // ring buffer (STALL_THRESHOLD samples) for speed calculation, unlike the full
 // hour-long buffer + chart data kept by components/IndexingStatus.tsx for the
 // single-service detail view.
+//
+// The three endpoints are fetched independently (Promise.allSettled, not
+// Promise.all) so a 500/network failure on the secondary `about`/`ethereum-rpc`
+// endpoints can never take down the whole row — only the primary `indexing`
+// endpoint drives the row's overall status.
 export function useServiceSummary(baseUrl: string): ServiceSummary {
   const [aboutData, setAboutData] = useState<AboutData | null>(null)
+  const [aboutError, setAboutError] = useState<string | null>(null)
   const [erc20, setErc20] = useState<ServiceSummaryMetric | null>(null)
   const [masterCopies, setMasterCopies] = useState<ServiceSummaryMetric | null>(null)
   const [rpcSynced, setRpcSynced] = useState<boolean | null>(null)
+  const [rpcError, setRpcError] = useState<string | null>(null)
   const [currentBlockNumber, setCurrentBlockNumber] = useState<number | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [status, setStatus] = useState<"loading" | "ok" | "error">("loading")
@@ -44,20 +66,31 @@ export function useServiceSummary(baseUrl: string): ServiceSummary {
     if (isFetchingRef.current) return
     isFetchingRef.current = true
 
-    try {
-      const [aboutResponse, indexingResponse, rpcResponse] = await Promise.all([
-        fetch(`${baseUrl}/api/v1/about/`),
-        fetch(`${baseUrl}/api/v1/about/indexing`),
-        fetch(`${baseUrl}/api/v1/about/ethereum-rpc`),
-      ])
+    const [aboutResult, indexingResult, rpcResult] = await Promise.allSettled([
+      fetchJson(`${baseUrl}/api/v1/about/`) as Promise<AboutData>,
+      fetchJson(`${baseUrl}/api/v1/about/indexing`) as Promise<Omit<IndexingData, "timestamp">>,
+      fetchJson(`${baseUrl}/api/v1/about/ethereum-rpc`),
+    ])
 
-      if (!indexingResponse.ok) {
-        throw new Error(`HTTP error! status: ${indexingResponse.status}`)
-      }
+    // About and RPC are secondary — a failure here is surfaced per-field but
+    // never marks the whole row unreachable, and never clears prior data.
+    if (aboutResult.status === "fulfilled") {
+      setAboutData(aboutResult.value)
+      setAboutError(null)
+    } else {
+      setAboutError(messageOf(aboutResult.reason))
+    }
 
-      const indexingData: Omit<IndexingData, "timestamp"> = await indexingResponse.json()
-      const dataWithTimestamp: IndexingData = { ...indexingData, timestamp: Date.now() }
+    if (rpcResult.status === "fulfilled") {
+      setRpcSynced(!rpcResult.value.syncing)
+      setRpcError(null)
+    } else {
+      setRpcError(messageOf(rpcResult.reason))
+    }
 
+    // Indexing is the primary signal this row exists to show.
+    if (indexingResult.status === "fulfilled") {
+      const dataWithTimestamp: IndexingData = { ...indexingResult.value, timestamp: Date.now() }
       historyRef.current = [dataWithTimestamp, ...historyRef.current].slice(0, STALL_THRESHOLD)
 
       const erc20Speed = calculateRollingSpeed(historyRef.current, true)
@@ -78,28 +111,19 @@ export function useServiceSummary(baseUrl: string): ServiceSummary {
         eta: calculateETA(masterCopiesBlocksLeft, masterCopiesSpeed),
       })
       setCurrentBlockNumber(dataWithTimestamp.currentBlockNumber)
-
-      if (aboutResponse.ok) {
-        setAboutData(await aboutResponse.json())
-      }
-
-      if (rpcResponse.ok) {
-        const rpcData = await rpcResponse.json()
-        setRpcSynced(!rpcData.syncing)
-      } else {
-        setRpcSynced(null)
-      }
-
       setLastUpdated(new Date())
-      setStatus("ok")
       setError(null)
-    } catch (err) {
-      console.error(`Error fetching summary for ${baseUrl}:`, err)
-      setStatus("error")
-      setError(err instanceof Error ? err.message : "Unknown error")
-    } finally {
-      isFetchingRef.current = false
+      setStatus("ok")
+    } else {
+      console.error(`Error fetching indexing data for ${baseUrl}:`, indexingResult.reason)
+      setError(messageOf(indexingResult.reason))
+      // Once we've had a successful fetch, a later transient failure keeps
+      // showing the last-known-good data (status stays "ok") instead of
+      // blanking the row — `error` being set is what flags it as stale.
+      setStatus((prev) => (prev === "ok" ? "ok" : "error"))
     }
+
+    isFetchingRef.current = false
   }, [baseUrl])
 
   useEffect(() => {
@@ -124,5 +148,16 @@ export function useServiceSummary(baseUrl: string): ServiceSummary {
     }
   }, [fetchSummary])
 
-  return { status, error, aboutData, erc20, masterCopies, rpcSynced, currentBlockNumber, lastUpdated }
+  return {
+    status,
+    error,
+    aboutData,
+    aboutError,
+    erc20,
+    masterCopies,
+    rpcSynced,
+    rpcError,
+    currentBlockNumber,
+    lastUpdated,
+  }
 }

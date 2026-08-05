@@ -66,9 +66,11 @@ export const getNetworkFromHost = (host: string): string => {
   const network = firstPart
     .replace(/safe/gi, "")
     .replace(/transaction/gi, "")
-    .replace(/-/g, "")
+    .replace(/-/g, " ")
     .trim()
 
-  // Convert to uppercase
-  return network.toUpperCase()
+  // Hosts like "transaction.safe.educhain.xyz" have no chain name encoded in
+  // the first segment (unlike "transaction-ethereum.safe...") — stripping
+  // leaves nothing, so fall back to the raw first segment instead of "".
+  return (network || firstPart).toUpperCase()
 }

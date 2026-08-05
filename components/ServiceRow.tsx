@@ -4,7 +4,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { TableCell, TableRow } from "@/components/ui/table"
-import { ArrowRight, X } from "lucide-react"
+import { AlertTriangle, ArrowRight, X } from "lucide-react"
 import { useServiceSummary } from "@/hooks/useServiceSummary"
 import { getNetworkFromHost } from "@/lib/service-url"
 
@@ -19,6 +19,12 @@ const SyncBadge = ({ synced }: { synced: boolean }) => (
   </Badge>
 )
 
+const Warning = ({ message }: { message: string }) => (
+  <span title={message}>
+    <AlertTriangle className="h-3.5 w-3.5 text-amber-400" aria-label={message} />
+  </span>
+)
+
 export default function ServiceRow({ url, onRemove }: ServiceRowProps) {
   const summary = useServiceSummary(url)
 
@@ -27,7 +33,10 @@ export default function ServiceRow({ url, onRemove }: ServiceRowProps) {
   return (
     <TableRow>
       <TableCell className="max-w-[220px]">
-        <div className="font-medium text-sky-300">{serviceName ?? "—"}</div>
+        <div className="font-medium text-sky-300 flex items-center gap-1.5">
+          {serviceName ?? "—"}
+          {summary.aboutError && <Warning message={`Service info unavailable: ${summary.aboutError}`} />}
+        </div>
         <div className="text-xs text-slate-500 truncate" title={url}>
           {url}
         </div>
@@ -72,16 +81,27 @@ export default function ServiceRow({ url, onRemove }: ServiceRowProps) {
           </TableCell>
           <TableCell>
             {summary.rpcSynced === null ? (
-              <span className="text-xs text-slate-500">N/A</span>
+              summary.rpcError ? (
+                <div className="flex items-center gap-1.5">
+                  <Warning message={`RPC status unavailable: ${summary.rpcError}`} />
+                  <span className="text-xs text-amber-400">Error</span>
+                </div>
+              ) : (
+                <span className="text-xs text-slate-500">N/A</span>
+              )
             ) : (
               <div className="flex items-center gap-1.5">
                 <div className={`h-2 w-2 rounded-full ${summary.rpcSynced ? "bg-emerald-500" : "bg-amber-500 animate-pulse"}`} />
                 <span className="text-xs text-slate-400">{summary.rpcSynced ? "Synced" : "Syncing"}</span>
+                {summary.rpcError && <Warning message={`Last RPC check failed: ${summary.rpcError}`} />}
               </div>
             )}
           </TableCell>
           <TableCell className="text-xs text-slate-500">
-            {summary.lastUpdated ? summary.lastUpdated.toLocaleTimeString() : "—"}
+            <div className="flex items-center gap-1.5">
+              {summary.lastUpdated ? summary.lastUpdated.toLocaleTimeString() : "—"}
+              {summary.error && <Warning message={`Last indexing check failed, showing last known data: ${summary.error}`} />}
+            </div>
           </TableCell>
         </>
       )}

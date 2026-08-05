@@ -42,6 +42,7 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
   const [erc20ETA, setErc20ETA] = useState<string>("N/A")
   const [masterCopiesETA, setMasterCopiesETA] = useState<string>("N/A")
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [showErc20Warning, setShowErc20Warning] = useState(false)
   const [showMasterCopiesWarning, setShowMasterCopiesWarning] = useState(false)
   const [showErc20Chart, setShowErc20Chart] = useState(false)
@@ -69,6 +70,9 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
 
     try {
       const response = await fetch(`${baseUrl}/api/v1/about/indexing`)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
       const newData: IndexingData = await response.json()
       const dataWithTimestamp = { ...newData, timestamp: Date.now() }
 
@@ -133,8 +137,10 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
       setLatestData(dataWithTimestamp)
       setLastUpdated(new Date())
       setCountdown(REFETCH_INTERVAL / 1000)
-    } catch (error) {
-      console.error("Error fetching indexing data:", error)
+      setError(null)
+    } catch (err) {
+      console.error("Error fetching indexing data:", err)
+      setError(err instanceof Error ? err.message : "Unknown error")
     } finally {
       isFetchingRef.current = false
     }
@@ -315,6 +321,13 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
   )
 
   if (!latestData) {
+    if (error) {
+      return (
+        <div className="text-center text-red-400 bg-red-900/20 border border-red-500/50 rounded-lg p-4">
+          Failed to load indexing data: {error}
+        </div>
+      )
+    }
     return <div className="text-center text-blue-300 animate-pulse">Loading...</div>
   }
 
@@ -336,6 +349,14 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
           Data is stored for the last hour only. Speeds and ETAs are calculated based on this time frame.
         </p>
       </div>
+      {error && (
+        <div className="bg-amber-900/20 border border-amber-500/50 rounded-lg p-3 sm:p-4 flex items-start space-x-3">
+          <InfoIcon className="w-5 h-5 sm:w-6 sm:h-6 text-amber-400 flex-shrink-0 mt-0.5"/>
+          <p className="text-xs sm:text-sm text-amber-200">
+            Last check failed, showing last known data: {error}
+          </p>
+        </div>
+      )}
       <Card className="bg-gray-900/50 border border-cyan-500/50 shadow-lg shadow-cyan-500/20">
         <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-4 sm:pb-2">
           <CardTitle className="text-lg sm:text-xl text-cyan-300">ERC20 Synchronization</CardTitle>
