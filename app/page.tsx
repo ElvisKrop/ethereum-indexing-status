@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { InfoIcon, LineChart } from "lucide-react"
 import AddServicesForm from "@/components/AddServicesForm"
 import ServicesTable from "@/components/ServicesTable"
+import HomeGuide from "@/components/HomeGuide"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { buildUrlsQuery } from "@/lib/service-url"
 import { loadTrackedServices, saveTrackedServices } from "@/lib/tracked-services-storage"
@@ -60,17 +61,20 @@ export default function Home() {
         <Alert className="mb-6 bg-card-dark border-card-dark p-4" dismissible>
           <InfoIcon className="h-4 w-4 flex-shrink-0 text-accent-cyan" />
           <AlertDescription className="text-sm text-slate-600 dark:text-gray-400">
-            This app monitors real-time blockchain indexing status for one or more transaction services. No data is
-            stored, and the app only works while this website is open.
+            This app monitors real-time blockchain indexing status for one or more transaction services. Nothing is
+            sent to or stored on a server — tracked services are remembered only in this browser.
           </AlertDescription>
         </Alert>
 
         {urls.length === 0 ? (
-          <Card className="overflow-hidden bg-white/70 dark:bg-slate-900/50 border-slate-200/70 dark:border-slate-800/50 shadow-xl backdrop-blur-xl">
-            <div className="p-4 sm:p-6">
-              <AddServicesForm />
-            </div>
-          </Card>
+          <>
+            <Card className="overflow-hidden bg-white/70 dark:bg-slate-900/50 border-slate-200/70 dark:border-slate-800/50 shadow-xl backdrop-blur-xl">
+              <div className="p-4 sm:p-6">
+                <AddServicesForm />
+              </div>
+            </Card>
+            <HomeGuide />
+          </>
         ) : (
           <ServicesTable urls={urls} />
         )}

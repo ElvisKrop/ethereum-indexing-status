@@ -300,8 +300,8 @@ are based on recent performance and may not be indicative of future indexing spe
           <Alert className="mb-6 bg-card-dark border-card-dark p-4" dismissible>
             <InfoIcon className="h-4 w-4 flex-shrink-0 text-accent-cyan"/>
             <AlertDescription className="text-sm text-slate-600 dark:text-gray-400">
-              This app monitors real-time blockchain indexing status. No data is stored, and the app only works while
-              this website is open.
+              This app monitors real-time blockchain indexing status. Nothing is sent to or stored on a server —
+              tracked services are remembered only in this browser.
             </AlertDescription>
           </Alert>
 
