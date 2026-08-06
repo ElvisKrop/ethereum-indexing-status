@@ -61,7 +61,7 @@ const Sidebar = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(
         ref={ref}
         data-expanded={expanded}
         className={cn(
-          "group h-screen sticky top-0 bg-slate-900 border-r border-slate-800/50 transition-all duration-300 ease-in-out",
+          "group h-screen sticky top-0 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800/50 transition-all duration-300 ease-in-out",
           expanded ? "w-[16rem]" : "w-[4rem]",
           className,
         )}
@@ -141,9 +141,11 @@ const SidebarMenuButton = React.forwardRef<
       ref={ref}
       className={cn(
         "flex w-full items-center gap-2 text-sm font-medium transition-colors",
-        "hover:bg-slate-800 hover:text-white",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700",
-        isActive ? "bg-slate-800 text-white" : "text-slate-400",
+        "hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-white",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 dark:focus-visible:ring-slate-700",
+        isActive
+          ? "bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white"
+          : "text-slate-600 dark:text-slate-400",
         !expanded && "justify-center px-0",
         className,
       )}

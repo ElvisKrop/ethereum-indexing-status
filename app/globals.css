@@ -3,6 +3,39 @@
 @tailwind utilities;
 
 :root {
+  --background: 210 40% 98%;
+  --foreground: 222.2 84% 4.9%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+
+  /* Primary uses cyan, matching the dark theme's accent */
+  --primary: 199 89% 40%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 210 40% 96%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+
+  --muted: 210 40% 94%;
+  --muted-foreground: 215 19% 35%;
+
+  --accent: 210 40% 94%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+
+  --destructive: 0 72% 45%;
+  --destructive-foreground: 210 40% 98%;
+
+  --border: 214 32% 88%;
+  --input: 214 32% 88%;
+  --ring: 199 89% 40%;
+
+  --radius: 0.5rem;
+}
+
+.dark {
   --background: 222.2 84% 4.9%;
   --foreground: 210 40% 98%;
 
@@ -34,8 +67,6 @@
   --border: 217.2 32.6% 13%;
   --input: 217.2 32.6% 17.5%;
   --ring: 212.7 26.8% 83.9%;
-
-  --radius: 0.5rem;
 }
 
 @layer base {
@@ -44,24 +75,42 @@
   }
   body {
     @apply bg-background text-foreground;
+    background: linear-gradient(to bottom, #f8fafc, #eef2f7);
+  }
+  .dark body {
     background: linear-gradient(to bottom, #0b1120, #0a0f1c);
   }
 }
 
 /* Custom utility classes */
 .bg-card-dark {
+  background-color: #f8fafc;
+}
+
+.dark .bg-card-dark {
   background-color: #0d1425;
 }
 
 .border-card-dark {
+  border-color: rgba(59, 130, 246, 0.15);
+}
+
+.dark .border-card-dark {
   border-color: rgba(59, 130, 246, 0.1);
 }
 
 .text-accent-blue {
+  color: #1d4ed8;
+}
+
+.dark .text-accent-blue {
   color: #3b82f6;
 }
 
 .text-accent-cyan {
-  color: #22d3ee;
+  color: #0e7490;
 }
 
+.dark .text-accent-cyan {
+  color: #22d3ee;
+}
