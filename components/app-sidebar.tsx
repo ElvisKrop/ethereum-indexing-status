@@ -357,8 +357,8 @@ export function SidebarWrapper({ children }: { children: React.ReactNode }) {
                   </div>
                   <div className="border-t border-slate-800/50 p-4 rounded-lg bg-slate-800/20">
                     <div className="text-xs text-slate-500">
-                      <p>Blockchain Indexing Status</p>
-                      <p className="mt-1">© 2025 Protofire</p>
+                      <p>TxService Indexing Status</p>
+                      <p className="mt-1">© 2026 Protofire</p>
                     </div>
                   </div>
                 </div>

@@ -58,6 +58,11 @@ export const maskApiKey = (url: string): string => {
   return maskedUrl
 }
 
+// Builds a repeated query string, e.g. buildUrlsQuery(["a","b"]) -> "url=a&url=b".
+export const buildUrlsQuery = (urls: string[], paramName = "url"): string => {
+  return urls.map((u) => `${paramName}=${encodeURIComponent(u)}`).join("&")
+}
+
 export const getNetworkFromHost = (host: string): string => {
   // Get the first part of the host (before the first dot)
   const firstPart = host.split(".")[0]

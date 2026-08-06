@@ -9,8 +9,10 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ArrowLeft, Copy, Database, InfoIcon, LineChart, RefreshCw, Server, Share2 } from "lucide-react"
 import { SidebarWrapper } from "@/components/app-sidebar"
 import { MobileSidebarTrigger } from "@/components/mobile-sidebar-trigger"
-import { isValidUrl, maskApiKey, sanitizeUrl, getNetworkFromHost } from "@/lib/service-url"
+import { buildUrlsQuery, isValidUrl, maskApiKey, sanitizeUrl, getNetworkFromHost } from "@/lib/service-url"
 import { AboutData, CurrentData, RpcData } from "@/lib/types"
+import { loadTrackedServices, saveTrackedServices } from "@/lib/tracked-services-storage"
+import { mergeCachedServiceStatus } from "@/lib/service-status-cache"
 
 export default function ServiceDetailPage() {
   const [activeUrl, setActiveUrl] = useState("")
@@ -71,6 +73,7 @@ export default function ServiceDetailPage() {
       const data = await response.json()
       setEthereumRpcData(data)
       setLastRpcFetched(new Date())
+      mergeCachedServiceStatus(url, { rpcSynced: !data.syncing })
     } catch (error) {
       console.error("Error fetching Ethereum RPC data:", error)
     } finally {
@@ -109,6 +112,7 @@ export default function ServiceDetailPage() {
       const data: AboutData = await response.json()
       setAboutData(data)
       setLastFetched(new Date())
+      mergeCachedServiceStatus(url, { aboutData: data })
 
       // If tracing RPC URL is set, fetch its data
       if (data.settings.ETHEREUM_TRACING_NODE_URL) {
@@ -134,6 +138,13 @@ export default function ServiceDetailPage() {
       setActiveUrl(sanitizedUrl)
       fetchAboutData(sanitizedUrl)
       fetchEthereumRpcData(sanitizedUrl)
+
+      // Merge into the persisted dashboard list — e.g. a bookmarked
+      // single-service link should still show up when returning to `/` later.
+      const stored = loadTrackedServices()
+      if (!stored.includes(sanitizedUrl)) {
+        saveTrackedServices([...stored, sanitizedUrl])
+      }
     }
   }, [searchParams, router, resetState, activeUrl, fetchAboutData, fetchEthereumRpcData])
 
@@ -180,7 +191,13 @@ export default function ServiceDetailPage() {
   }, [activeUrl, aboutData, fetchTracingRpcData])
 
   const handleBackToDashboard = () => {
-    router.push("/")
+    // `from` carries the rest of the multi-service dashboard this page was
+    // reached from (see components/ServiceRow.tsx) — without it, "back"
+    // could only ever land on the empty add-services form, losing whatever
+    // else was being tracked. Falls back to `/` when absent (e.g. this
+    // service was opened directly as a single-URL link).
+    const from = searchParams.getAll("from")
+    router.push(from.length > 0 ? `/?${buildUrlsQuery(from)}` : "/")
   }
 
   const handleShareUrl = () => {

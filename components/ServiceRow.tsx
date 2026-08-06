@@ -6,10 +6,11 @@ import { Badge } from "@/components/ui/badge"
 import { TableCell, TableRow } from "@/components/ui/table"
 import { AlertTriangle, ArrowRight, X } from "lucide-react"
 import { useServiceSummary } from "@/hooks/useServiceSummary"
-import { getNetworkFromHost } from "@/lib/service-url"
+import { buildUrlsQuery, getNetworkFromHost } from "@/lib/service-url"
 
 interface ServiceRowProps {
   url: string
+  siblingUrls: string[]
   onRemove: (url: string) => void
 }
 
@@ -25,10 +26,15 @@ const Warning = ({ message }: { message: string }) => (
   </span>
 )
 
-export default function ServiceRow({ url, onRemove }: ServiceRowProps) {
+export default function ServiceRow({ url, siblingUrls, onRemove }: ServiceRowProps) {
   const summary = useServiceSummary(url)
 
   const serviceName = summary.aboutData ? getNetworkFromHost(summary.aboutData.host) : null
+
+  // Carry the full dashboard list along so "Back to Dashboard" on the detail
+  // page can restore it — a plain `/service?url=<this one>` link has no way
+  // to know what else was being tracked.
+  const detailsHref = `/service?url=${encodeURIComponent(url)}&${buildUrlsQuery(siblingUrls, "from")}`
 
   return (
     <TableRow>
@@ -108,7 +114,7 @@ export default function ServiceRow({ url, onRemove }: ServiceRowProps) {
 
       <TableCell className="text-right whitespace-nowrap">
         <Button asChild size="sm" variant="ghost" className="text-sky-400 hover:text-sky-300">
-          <Link href={`/service?url=${encodeURIComponent(url)}`}>
+          <Link href={detailsHref}>
             Details <ArrowRight className="h-3.5 w-3.5 ml-1" />
           </Link>
         </Button>

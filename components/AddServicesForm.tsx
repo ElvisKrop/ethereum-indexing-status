@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Plus, XCircle } from "lucide-react"
-import { isValidUrl, sanitizeUrl } from "@/lib/service-url"
+import { buildUrlsQuery, isValidUrl, sanitizeUrl } from "@/lib/service-url"
+import { saveTrackedServices } from "@/lib/tracked-services-storage"
 
 export default function AddServicesForm() {
   const router = useRouter()
@@ -43,10 +44,12 @@ export default function AddServicesForm() {
       return
     }
 
+    saveTrackedServices(deduped)
+
     if (deduped.length === 1) {
       router.push(`/service?url=${encodeURIComponent(deduped[0])}`)
     } else {
-      router.push(`/?${deduped.map((u) => `url=${encodeURIComponent(u)}`).join("&")}`)
+      router.push(`/?${buildUrlsQuery(deduped)}`)
     }
   }
 

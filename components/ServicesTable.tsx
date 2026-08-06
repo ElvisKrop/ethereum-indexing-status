@@ -7,14 +7,12 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
 import ServiceRow from "@/components/ServiceRow"
-import { isValidUrl, sanitizeUrl } from "@/lib/service-url"
+import { buildUrlsQuery, isValidUrl, sanitizeUrl } from "@/lib/service-url"
+import { removeCachedServiceStatus } from "@/lib/service-status-cache"
+import { saveTrackedServices } from "@/lib/tracked-services-storage"
 
 interface ServicesTableProps {
   urls: string[]
-}
-
-function buildUrlsQuery(urls: string[]): string {
-  return urls.map((u) => `url=${encodeURIComponent(u)}`).join("&")
 }
 
 export default function ServicesTable({ urls }: ServicesTableProps) {
@@ -38,11 +36,15 @@ export default function ServicesTable({ urls }: ServicesTableProps) {
     }
 
     setNewUrl("")
-    router.push(`/?${buildUrlsQuery([...urls, sanitized])}`)
+    const next = [...urls, sanitized]
+    saveTrackedServices(next)
+    router.push(`/?${buildUrlsQuery(next)}`)
   }
 
   const handleRemove = (url: string) => {
     const remaining = urls.filter((u) => u !== url)
+    saveTrackedServices(remaining)
+    removeCachedServiceStatus(url)
     if (remaining.length === 0) {
       router.push("/")
     } else {
@@ -81,7 +83,7 @@ export default function ServicesTable({ urls }: ServicesTableProps) {
           </TableHeader>
           <TableBody>
             {urls.map((url) => (
-              <ServiceRow key={url} url={url} onRemove={handleRemove} />
+              <ServiceRow key={url} url={url} siblingUrls={urls} onRemove={handleRemove} />
             ))}
           </TableBody>
         </Table>

@@ -26,6 +26,7 @@ import {
   REFETCH_INTERVAL,
   STALL_THRESHOLD,
 } from "@/lib/indexing-metrics"
+import { CachedServiceStatus, loadCachedServiceStatus, mergeCachedServiceStatus } from "@/lib/service-status-cache"
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend)
 
@@ -34,14 +35,39 @@ interface IndexingStatusProps {
   onDataUpdate: (data: CurrentData) => void
 }
 
+// Reconstructs an IndexingData-shaped snapshot from the shared cache (see
+// lib/service-status-cache.ts) so this component can seed its initial render
+// from whatever components/ServiceRow.tsx's lighter poller last learned about
+// this same service, instead of always starting from a blank "Loading..." —
+// the two views share one cache entry per URL, keyed by baseUrl.
+const toIndexingData = (cached: CachedServiceStatus): IndexingData | null => {
+  if (cached.currentBlockNumber === null || !cached.erc20 || !cached.masterCopies) return null
+
+  return {
+    currentBlockNumber: cached.currentBlockNumber,
+    erc20BlockNumber: cached.currentBlockNumber - cached.erc20.blocksLeft,
+    erc20Synced: cached.erc20.synced,
+    masterCopiesBlockNumber: cached.currentBlockNumber - cached.masterCopies.blocksLeft,
+    masterCopiesSynced: cached.masterCopies.synced,
+    synced: cached.erc20.synced && cached.masterCopies.synced,
+    timestamp: cached.lastUpdated ? new Date(cached.lastUpdated).getTime() : Date.now(),
+  }
+}
+
 export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatusProps) {
+  const [initialCache] = useState<CachedServiceStatus | null>(() => loadCachedServiceStatus(baseUrl))
+
   const [data, setData] = useState<IndexingData[]>([])
-  const [latestData, setLatestData] = useState<IndexingData | null>(null)
-  const [erc20Speed, setErc20Speed] = useState<number>(0)
-  const [masterCopiesSpeed, setMasterCopiesSpeed] = useState<number>(0)
-  const [erc20ETA, setErc20ETA] = useState<string>("N/A")
-  const [masterCopiesETA, setMasterCopiesETA] = useState<string>("N/A")
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [latestData, setLatestData] = useState<IndexingData | null>(() =>
+    initialCache ? toIndexingData(initialCache) : null,
+  )
+  const [erc20Speed, setErc20Speed] = useState<number>(initialCache?.erc20?.speed ?? 0)
+  const [masterCopiesSpeed, setMasterCopiesSpeed] = useState<number>(initialCache?.masterCopies?.speed ?? 0)
+  const [erc20ETA, setErc20ETA] = useState<string>(initialCache?.erc20?.eta ?? "N/A")
+  const [masterCopiesETA, setMasterCopiesETA] = useState<string>(initialCache?.masterCopies?.eta ?? "N/A")
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(
+    initialCache?.lastUpdated ? new Date(initialCache.lastUpdated) : null,
+  )
   const [error, setError] = useState<string | null>(null)
   const [showErc20Warning, setShowErc20Warning] = useState(false)
   const [showMasterCopiesWarning, setShowMasterCopiesWarning] = useState(false)
@@ -129,6 +155,23 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
               synced: dataWithTimestamp.masterCopiesSynced,
             },
             latestBlock: dataWithTimestamp.currentBlockNumber,
+          })
+
+          mergeCachedServiceStatus(baseUrl, {
+            erc20: {
+              synced: dataWithTimestamp.erc20Synced,
+              blocksLeft: erc20BlocksLeft,
+              speed: newErc20Speed,
+              eta: newErc20ETA,
+            },
+            masterCopies: {
+              synced: dataWithTimestamp.masterCopiesSynced,
+              blocksLeft: masterCopiesBlocksLeft,
+              speed: newMasterCopiesSpeed,
+              eta: newMasterCopiesETA,
+            },
+            currentBlockNumber: dataWithTimestamp.currentBlockNumber,
+            lastUpdated: new Date().toISOString(),
           })
         }
 

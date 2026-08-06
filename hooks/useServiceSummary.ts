@@ -3,13 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { AboutData } from "@/lib/types"
 import { calculateETA, calculateRollingSpeed, IndexingData, REFETCH_INTERVAL, STALL_THRESHOLD } from "@/lib/indexing-metrics"
+import {
+  CachedServiceStatus,
+  createEmptyServiceStatus,
+  loadCachedServiceStatus,
+  saveCachedServiceStatus,
+  ServiceSummaryMetric,
+} from "@/lib/service-status-cache"
 
-export interface ServiceSummaryMetric {
-  synced: boolean
-  blocksLeft: number
-  speed: number
-  eta: string
-}
+export type { ServiceSummaryMetric } from "@/lib/service-status-cache"
 
 export interface ServiceSummary {
   // "error" only means the indexing endpoint has never returned data at all.
@@ -46,21 +48,33 @@ const fetchJson = async (url: string) => {
 // Promise.all) so a 500/network failure on the secondary `about`/`ethereum-rpc`
 // endpoints can never take down the whole row — only the primary `indexing`
 // endpoint drives the row's overall status.
+//
+// Every successful field is cached to localStorage (keyed by baseUrl) so a
+// remounted row — e.g. navigating to /service and back — shows the last-known
+// data with its real timestamp immediately, instead of a blank "Loading..."
+// while it revalidates in the background. Callers must key their component by
+// `url` (as components/ServicesTable.tsx does) so baseUrl never changes across
+// the lifetime of one hook instance — this hook assumes it doesn't.
 export function useServiceSummary(baseUrl: string): ServiceSummary {
-  const [aboutData, setAboutData] = useState<AboutData | null>(null)
+  const [initialCache] = useState<CachedServiceStatus | null>(() => loadCachedServiceStatus(baseUrl))
+
+  const [aboutData, setAboutData] = useState<AboutData | null>(initialCache?.aboutData ?? null)
   const [aboutError, setAboutError] = useState<string | null>(null)
-  const [erc20, setErc20] = useState<ServiceSummaryMetric | null>(null)
-  const [masterCopies, setMasterCopies] = useState<ServiceSummaryMetric | null>(null)
-  const [rpcSynced, setRpcSynced] = useState<boolean | null>(null)
+  const [erc20, setErc20] = useState<ServiceSummaryMetric | null>(initialCache?.erc20 ?? null)
+  const [masterCopies, setMasterCopies] = useState<ServiceSummaryMetric | null>(initialCache?.masterCopies ?? null)
+  const [rpcSynced, setRpcSynced] = useState<boolean | null>(initialCache?.rpcSynced ?? null)
   const [rpcError, setRpcError] = useState<string | null>(null)
-  const [currentBlockNumber, setCurrentBlockNumber] = useState<number | null>(null)
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
-  const [status, setStatus] = useState<"loading" | "ok" | "error">("loading")
+  const [currentBlockNumber, setCurrentBlockNumber] = useState<number | null>(initialCache?.currentBlockNumber ?? null)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(
+    initialCache?.lastUpdated ? new Date(initialCache.lastUpdated) : null,
+  )
+  const [status, setStatus] = useState<"loading" | "ok" | "error">(initialCache ? "ok" : "loading")
   const [error, setError] = useState<string | null>(null)
 
   const historyRef = useRef<IndexingData[]>([])
   const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const isFetchingRef = useRef(false)
+  const snapshotRef = useRef<CachedServiceStatus>(initialCache ?? createEmptyServiceStatus())
 
   const fetchSummary = useCallback(async () => {
     if (isFetchingRef.current) return
@@ -77,13 +91,16 @@ export function useServiceSummary(baseUrl: string): ServiceSummary {
     if (aboutResult.status === "fulfilled") {
       setAboutData(aboutResult.value)
       setAboutError(null)
+      snapshotRef.current = { ...snapshotRef.current, aboutData: aboutResult.value }
     } else {
       setAboutError(messageOf(aboutResult.reason))
     }
 
     if (rpcResult.status === "fulfilled") {
-      setRpcSynced(!rpcResult.value.syncing)
+      const synced = !rpcResult.value.syncing
+      setRpcSynced(synced)
       setRpcError(null)
+      snapshotRef.current = { ...snapshotRef.current, rpcSynced: synced }
     } else {
       setRpcError(messageOf(rpcResult.reason))
     }
@@ -98,22 +115,34 @@ export function useServiceSummary(baseUrl: string): ServiceSummary {
       const erc20BlocksLeft = dataWithTimestamp.currentBlockNumber - dataWithTimestamp.erc20BlockNumber
       const masterCopiesBlocksLeft = dataWithTimestamp.currentBlockNumber - dataWithTimestamp.masterCopiesBlockNumber
 
-      setErc20({
+      const nextErc20 = {
         synced: dataWithTimestamp.erc20Synced,
         blocksLeft: erc20BlocksLeft,
         speed: erc20Speed,
         eta: calculateETA(erc20BlocksLeft, erc20Speed),
-      })
-      setMasterCopies({
+      }
+      const nextMasterCopies = {
         synced: dataWithTimestamp.masterCopiesSynced,
         blocksLeft: masterCopiesBlocksLeft,
         speed: masterCopiesSpeed,
         eta: calculateETA(masterCopiesBlocksLeft, masterCopiesSpeed),
-      })
+      }
+      const now = new Date()
+
+      setErc20(nextErc20)
+      setMasterCopies(nextMasterCopies)
       setCurrentBlockNumber(dataWithTimestamp.currentBlockNumber)
-      setLastUpdated(new Date())
+      setLastUpdated(now)
       setError(null)
       setStatus("ok")
+
+      snapshotRef.current = {
+        ...snapshotRef.current,
+        erc20: nextErc20,
+        masterCopies: nextMasterCopies,
+        currentBlockNumber: dataWithTimestamp.currentBlockNumber,
+        lastUpdated: now.toISOString(),
+      }
     } else {
       console.error(`Error fetching indexing data for ${baseUrl}:`, indexingResult.reason)
       setError(messageOf(indexingResult.reason))
@@ -123,13 +152,11 @@ export function useServiceSummary(baseUrl: string): ServiceSummary {
       setStatus((prev) => (prev === "ok" ? "ok" : "error"))
     }
 
+    saveCachedServiceStatus(baseUrl, snapshotRef.current)
     isFetchingRef.current = false
   }, [baseUrl])
 
   useEffect(() => {
-    historyRef.current = []
-    setStatus("loading")
-
     const scheduleFetch = () => {
       if (fetchTimeoutRef.current) {
         clearTimeout(fetchTimeoutRef.current)
