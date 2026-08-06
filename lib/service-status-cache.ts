@@ -14,6 +14,7 @@ export interface CachedServiceStatus {
   erc20: ServiceSummaryMetric | null
   masterCopies: ServiceSummaryMetric | null
   rpcSynced: boolean | null
+  chainId: number | null
   currentBlockNumber: number | null
   lastUpdated: string | null // ISO timestamp — Date doesn't survive JSON round-trips
 }
@@ -39,6 +40,7 @@ export function createEmptyServiceStatus(): CachedServiceStatus {
     erc20: null,
     masterCopies: null,
     rpcSynced: null,
+    chainId: null,
     currentBlockNumber: null,
     lastUpdated: null,
   }

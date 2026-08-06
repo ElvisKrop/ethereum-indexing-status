@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress"
 import { TableCell, TableRow } from "@/components/ui/table"
 import { AlertTriangle, ArrowRight, X } from "lucide-react"
 import { useServiceSummary } from "@/hooks/useServiceSummary"
+import { useChainlist } from "@/hooks/useChainlist"
 import { buildUrlsQuery, getNetworkFromHost } from "@/lib/service-url"
 import { calculateProgress } from "@/lib/indexing-metrics"
 
@@ -30,8 +31,13 @@ const Warning = ({ message }: { message: string }) => (
 
 export default function ServiceRow({ url, siblingUrls, onRemove }: ServiceRowProps) {
   const summary = useServiceSummary(url)
+  const chainNames = useChainlist()
 
-  const serviceName = summary.aboutData ? getNetworkFromHost(summary.aboutData.host) : null
+  // Chainlist's name for the chain (e.g. "Arbitrum One") is preferred since it's
+  // an authoritative, human-friendly name — the hostname heuristic is only a
+  // fallback for while chainlist hasn't loaded yet or the chain isn't listed.
+  const chainlistName = summary.chainId !== null ? chainNames?.get(summary.chainId) : undefined
+  const serviceName = chainlistName ?? (summary.aboutData ? getNetworkFromHost(summary.aboutData.host) : null)
 
   const currentBlockNumber = summary.currentBlockNumber ?? 0
   const erc20Progress = summary.erc20 ? calculateProgress(summary.erc20.blocksLeft, currentBlockNumber) : 0

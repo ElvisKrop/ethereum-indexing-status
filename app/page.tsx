@@ -11,11 +11,18 @@ import HomeGuide from "@/components/HomeGuide"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { buildUrlsQuery } from "@/lib/service-url"
 import { loadTrackedServices, saveTrackedServices } from "@/lib/tracked-services-storage"
+import { loadChainlist } from "@/lib/chainlist"
 
 export default function Home() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const urls = searchParams.getAll("url")
+
+  // Kick off the chainlist fetch as soon as the app mounts, so its result is
+  // most likely already cached by the time ServiceRow needs it for titles.
+  useEffect(() => {
+    loadChainlist()
+  }, [])
 
   // Bootstrap the dashboard from localStorage on a fresh visit (no `url=`
   // params at all) — e.g. reopening the app in a new tab/session. The query

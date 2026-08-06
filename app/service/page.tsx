@@ -70,10 +70,10 @@ export default function ServiceDetailPage() {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
-      const data = await response.json()
+      const data: RpcData = await response.json()
       setEthereumRpcData(data)
       setLastRpcFetched(new Date())
-      mergeCachedServiceStatus(url, { rpcSynced: !data.syncing })
+      mergeCachedServiceStatus(url, { rpcSynced: !data.syncing, chainId: data.chain_id })
     } catch (error) {
       console.error("Error fetching Ethereum RPC data:", error)
     } finally {

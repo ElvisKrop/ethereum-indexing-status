@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { AboutData } from "@/lib/types"
+import { AboutData, RpcData } from "@/lib/types"
 import { calculateETA, calculateRollingSpeed, IndexingData, REFETCH_INTERVAL, STALL_THRESHOLD } from "@/lib/indexing-metrics"
 import {
   CachedServiceStatus,
@@ -25,6 +25,7 @@ export interface ServiceSummary {
   masterCopies: ServiceSummaryMetric | null
   rpcSynced: boolean | null
   rpcError: string | null
+  chainId: number | null
   currentBlockNumber: number | null
   lastUpdated: Date | null
 }
@@ -67,6 +68,7 @@ export function useServiceSummary(baseUrl: string): ServiceSummary {
   const [masterCopies, setMasterCopies] = useState<ServiceSummaryMetric | null>(null)
   const [rpcSynced, setRpcSynced] = useState<boolean | null>(null)
   const [rpcError, setRpcError] = useState<string | null>(null)
+  const [chainId, setChainId] = useState<number | null>(null)
   const [currentBlockNumber, setCurrentBlockNumber] = useState<number | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [status, setStatus] = useState<"loading" | "ok" | "error">("loading")
@@ -87,6 +89,7 @@ export function useServiceSummary(baseUrl: string): ServiceSummary {
     snapshotRef.current = cached
     if (cached.aboutData) setAboutData(cached.aboutData)
     if (cached.rpcSynced !== null) setRpcSynced(cached.rpcSynced)
+    if (cached.chainId !== null) setChainId(cached.chainId)
     if (cached.erc20) setErc20(cached.erc20)
     if (cached.masterCopies) setMasterCopies(cached.masterCopies)
     if (cached.currentBlockNumber !== null) setCurrentBlockNumber(cached.currentBlockNumber)
@@ -103,7 +106,7 @@ export function useServiceSummary(baseUrl: string): ServiceSummary {
     const [aboutResult, indexingResult, rpcResult] = await Promise.allSettled([
       fetchJson(`${baseUrl}/api/v1/about/`) as Promise<AboutData>,
       fetchJson(`${baseUrl}/api/v1/about/indexing`) as Promise<Omit<IndexingData, "timestamp">>,
-      fetchJson(`${baseUrl}/api/v1/about/ethereum-rpc`),
+      fetchJson(`${baseUrl}/api/v1/about/ethereum-rpc`) as Promise<RpcData>,
     ])
 
     // About and RPC are secondary — a failure here is surfaced per-field but
@@ -120,7 +123,8 @@ export function useServiceSummary(baseUrl: string): ServiceSummary {
       const synced = !rpcResult.value.syncing
       setRpcSynced(synced)
       setRpcError(null)
-      snapshotRef.current = { ...snapshotRef.current, rpcSynced: synced }
+      setChainId(rpcResult.value.chain_id)
+      snapshotRef.current = { ...snapshotRef.current, rpcSynced: synced, chainId: rpcResult.value.chain_id }
     } else {
       setRpcError(messageOf(rpcResult.reason))
     }
@@ -204,6 +208,7 @@ export function useServiceSummary(baseUrl: string): ServiceSummary {
     masterCopies,
     rpcSynced,
     rpcError,
+    chainId,
     currentBlockNumber,
     lastUpdated,
   }
