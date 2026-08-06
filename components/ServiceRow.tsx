@@ -22,7 +22,7 @@ const SyncBadge = ({ synced }: { synced: boolean }) => (
 
 const Warning = ({ message }: { message: string }) => (
   <span title={message}>
-    <AlertTriangle className="h-3.5 w-3.5 text-amber-400" aria-label={message} />
+    <AlertTriangle className="h-3.5 w-3.5 text-amber-700 dark:text-amber-400" aria-label={message} />
   </span>
 )
 
@@ -39,21 +39,21 @@ export default function ServiceRow({ url, siblingUrls, onRemove }: ServiceRowPro
   return (
     <TableRow>
       <TableCell className="max-w-[220px]">
-        <div className="font-medium text-sky-300 flex items-center gap-1.5">
+        <div className="font-medium text-sky-700 dark:text-sky-300 flex items-center gap-1.5">
           {serviceName ?? "—"}
           {summary.aboutError && <Warning message={`Service info unavailable: ${summary.aboutError}`} />}
         </div>
-        <div className="text-xs text-slate-500 truncate" title={url}>
+        <div className="text-xs text-slate-600 dark:text-slate-400 truncate" title={url}>
           {url}
         </div>
       </TableCell>
 
       {summary.status === "error" ? (
-        <TableCell colSpan={5} className="text-red-400 text-sm">
+        <TableCell colSpan={5} className="text-red-600 dark:text-red-400 text-sm">
           Unreachable{summary.error ? `: ${summary.error}` : ""}
         </TableCell>
       ) : summary.status === "loading" ? (
-        <TableCell colSpan={5} className="text-slate-400 text-sm animate-pulse">
+        <TableCell colSpan={5} className="text-slate-600 dark:text-slate-400 text-sm animate-pulse">
           Loading...
         </TableCell>
       ) : (
@@ -62,7 +62,7 @@ export default function ServiceRow({ url, siblingUrls, onRemove }: ServiceRowPro
             {summary.erc20 && (
               <div className="space-y-1">
                 <SyncBadge synced={summary.erc20.synced} />
-                <div className="text-xs text-slate-400">
+                <div className="text-xs text-slate-600 dark:text-slate-400">
                   {summary.erc20.synced ? "Fully synced" : `${summary.erc20.speed.toFixed(1)} blocks/min`}
                 </div>
               </div>
@@ -72,13 +72,13 @@ export default function ServiceRow({ url, siblingUrls, onRemove }: ServiceRowPro
             {summary.masterCopies && (
               <div className="space-y-1">
                 <SyncBadge synced={summary.masterCopies.synced} />
-                <div className="text-xs text-slate-400">
+                <div className="text-xs text-slate-600 dark:text-slate-400">
                   {summary.masterCopies.synced ? "Fully synced" : `${summary.masterCopies.speed.toFixed(1)} blocks/min`}
                 </div>
               </div>
             )}
           </TableCell>
-          <TableCell className="text-sm text-slate-300">
+          <TableCell className="text-sm text-slate-700 dark:text-slate-300">
             {summary.erc20?.synced && summary.masterCopies?.synced
               ? "—"
               : [summary.erc20?.synced ? null : summary.erc20?.eta, summary.masterCopies?.synced ? null : summary.masterCopies?.eta]
@@ -90,20 +90,20 @@ export default function ServiceRow({ url, siblingUrls, onRemove }: ServiceRowPro
               summary.rpcError ? (
                 <div className="flex items-center gap-1.5">
                   <Warning message={`RPC status unavailable: ${summary.rpcError}`} />
-                  <span className="text-xs text-amber-400">Error</span>
+                  <span className="text-xs text-amber-700 dark:text-amber-400">Error</span>
                 </div>
               ) : (
-                <span className="text-xs text-slate-500">N/A</span>
+                <span className="text-xs text-slate-600 dark:text-slate-400">N/A</span>
               )
             ) : (
               <div className="flex items-center gap-1.5">
                 <div className={`h-2 w-2 rounded-full ${summary.rpcSynced ? "bg-emerald-500" : "bg-amber-500 animate-pulse"}`} />
-                <span className="text-xs text-slate-400">{summary.rpcSynced ? "Synced" : "Syncing"}</span>
+                <span className="text-xs text-slate-600 dark:text-slate-400">{summary.rpcSynced ? "Synced" : "Syncing"}</span>
                 {summary.rpcError && <Warning message={`Last RPC check failed: ${summary.rpcError}`} />}
               </div>
             )}
           </TableCell>
-          <TableCell className="text-xs text-slate-500">
+          <TableCell className="text-xs text-slate-600 dark:text-slate-400">
             <div className="flex items-center gap-1.5">
               {summary.lastUpdated ? summary.lastUpdated.toLocaleTimeString() : "—"}
               {summary.error && <Warning message={`Last indexing check failed, showing last known data: ${summary.error}`} />}
@@ -113,7 +113,7 @@ export default function ServiceRow({ url, siblingUrls, onRemove }: ServiceRowPro
       )}
 
       <TableCell className="text-right whitespace-nowrap">
-        <Button asChild size="sm" variant="ghost" className="text-sky-400 hover:text-sky-300">
+        <Button asChild size="sm" variant="ghost" className="text-sky-700 hover:text-sky-800 dark:text-sky-400 dark:hover:text-sky-300">
           <Link href={detailsHref}>
             Details <ArrowRight className="h-3.5 w-3.5 ml-1" />
           </Link>
@@ -121,7 +121,7 @@ export default function ServiceRow({ url, siblingUrls, onRemove }: ServiceRowPro
         <Button
           size="sm"
           variant="ghost"
-          className="text-slate-500 hover:text-red-400"
+          className="text-slate-500 hover:text-red-600 dark:text-slate-500 dark:hover:text-red-400"
           onClick={() => onRemove(url)}
         >
           <X className="h-4 w-4" />

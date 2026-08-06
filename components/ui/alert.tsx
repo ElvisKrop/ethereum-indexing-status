@@ -53,7 +53,7 @@ const Alert = React.forwardRef<
       {dismissible && (
         <button
           onClick={handleDismiss}
-          className="absolute right-2 top-2 rounded-full p-1 text-foreground/60 hover:text-foreground/90 hover:bg-slate-700/30 active:bg-slate-700/50 transition-all duration-150 focus:outline-none focus-visible:ring-1 focus-visible:ring-slate-500 focus-visible:ring-offset-1"
+          className="absolute right-2 top-2 rounded-full p-1 text-foreground/60 hover:text-foreground/90 hover:bg-foreground/10 active:bg-foreground/15 transition-all duration-150 focus:outline-none focus-visible:ring-1 focus-visible:ring-foreground/40 focus-visible:ring-offset-1"
           aria-label="Close"
         >
           <X className="h-4 w-4 transform transition-transform duration-150 ease-in-out active:scale-90" />

@@ -56,25 +56,45 @@ const fetchJson = async (url: string) => {
 // `url` (as components/ServicesTable.tsx does) so baseUrl never changes across
 // the lifetime of one hook instance — this hook assumes it doesn't.
 export function useServiceSummary(baseUrl: string): ServiceSummary {
-  const [initialCache] = useState<CachedServiceStatus | null>(() => loadCachedServiceStatus(baseUrl))
-
-  const [aboutData, setAboutData] = useState<AboutData | null>(initialCache?.aboutData ?? null)
+  // Deliberately NOT seeded from the cache here: localStorage doesn't exist
+  // during SSR, so a lazy useState(() => loadCachedServiceStatus(...)) would
+  // render "no data" on the server and then find real cached data on the
+  // client's first render — a hydration mismatch. Cache hydration happens in
+  // the effect below instead, which only ever runs client-side post-mount.
+  const [aboutData, setAboutData] = useState<AboutData | null>(null)
   const [aboutError, setAboutError] = useState<string | null>(null)
-  const [erc20, setErc20] = useState<ServiceSummaryMetric | null>(initialCache?.erc20 ?? null)
-  const [masterCopies, setMasterCopies] = useState<ServiceSummaryMetric | null>(initialCache?.masterCopies ?? null)
-  const [rpcSynced, setRpcSynced] = useState<boolean | null>(initialCache?.rpcSynced ?? null)
+  const [erc20, setErc20] = useState<ServiceSummaryMetric | null>(null)
+  const [masterCopies, setMasterCopies] = useState<ServiceSummaryMetric | null>(null)
+  const [rpcSynced, setRpcSynced] = useState<boolean | null>(null)
   const [rpcError, setRpcError] = useState<string | null>(null)
-  const [currentBlockNumber, setCurrentBlockNumber] = useState<number | null>(initialCache?.currentBlockNumber ?? null)
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(
-    initialCache?.lastUpdated ? new Date(initialCache.lastUpdated) : null,
-  )
-  const [status, setStatus] = useState<"loading" | "ok" | "error">(initialCache ? "ok" : "loading")
+  const [currentBlockNumber, setCurrentBlockNumber] = useState<number | null>(null)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [status, setStatus] = useState<"loading" | "ok" | "error">("loading")
   const [error, setError] = useState<string | null>(null)
 
   const historyRef = useRef<IndexingData[]>([])
   const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const isFetchingRef = useRef(false)
-  const snapshotRef = useRef<CachedServiceStatus>(initialCache ?? createEmptyServiceStatus())
+  const snapshotRef = useRef<CachedServiceStatus>(createEmptyServiceStatus())
+
+  // Runs before the fetch-scheduling effect below (React runs effects in
+  // declaration order), so cached data is in place before the first live
+  // fetch's result arrives.
+  useEffect(() => {
+    const cached = loadCachedServiceStatus(baseUrl)
+    if (!cached) return
+
+    snapshotRef.current = cached
+    if (cached.aboutData) setAboutData(cached.aboutData)
+    if (cached.rpcSynced !== null) setRpcSynced(cached.rpcSynced)
+    if (cached.erc20) setErc20(cached.erc20)
+    if (cached.masterCopies) setMasterCopies(cached.masterCopies)
+    if (cached.currentBlockNumber !== null) setCurrentBlockNumber(cached.currentBlockNumber)
+    if (cached.lastUpdated) {
+      setLastUpdated(new Date(cached.lastUpdated))
+      setStatus("ok")
+    }
+  }, [baseUrl])
 
   const fetchSummary = useCallback(async () => {
     if (isFetchingRef.current) return

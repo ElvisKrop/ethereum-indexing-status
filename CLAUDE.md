@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project overview
 
-A Next.js dashboard that monitors the indexing/sync status of a Gnosis/Safe **Transaction Service** instance against Ethereum. The user pastes a transaction-service base URL (e.g. `https://transaction-ethereum.safe.protofire.io`); the app then polls that service's REST API client-side and renders ERC20 / Master Copies sync progress, speed, and ETA, plus RPC node status.
+A Next.js dashboard that monitors the indexing/sync status of one or more Gnosis/Safe **Transaction Service** instances against Ethereum. The user adds one or more transaction-service base URLs (e.g. `https://transaction-ethereum.safe.protofire.io`); the app polls each service's REST API client-side and renders ERC20 / Master Copies sync progress, speed, ETA, and RPC node status.
 
 This repo is synced from a [v0.dev](https://v0.dev) project (see README.md) — changes made in v0.dev are pushed here automatically and deployed via Vercel.
 
@@ -17,7 +17,7 @@ pnpm install       # install dependencies
 pnpm dev           # start dev server (next dev)
 pnpm build         # production build
 pnpm start         # run production build
-pnpm lint          # next lint
+pnpm lint          # eslint . (flat config, see eslint.config.mjs)
 ```
 
 There is no test suite in this repository.
@@ -26,30 +26,37 @@ Note: `next.config.mjs` sets `eslint.ignoreDuringBuilds: true` and `typescript.i
 
 ## Architecture
 
-### Single-page, client-driven app
+### Two routes, both client-driven, no backend
 
-There is effectively one route: `app/page.tsx`. It is a large `"use client"` component that owns almost all state and drives three independent client-side data flows against the user-supplied base URL:
+- **`app/page.tsx`** (`/`) — reads all `url` search params (`?url=A&url=B`). Zero params → `<AddServicesForm>` (dynamic list of URL inputs). One param → redirects to `/service`. Two or more → `<ServicesTable>`, one lightweight-polling `<ServiceRow>` per tracked URL (`hooks/useServiceSummary.ts`).
+- **`app/service/page.tsx`** (`/service?url=...`) — the full single-service detail view: service info/settings, RPC + tracing-RPC status, and `<IndexingStatus>` (charts). Reads a single `url` param.
 
-- `GET {baseUrl}/api/v1/about/` — service metadata + settings (`AboutData`/`Settings` interfaces defined in `app/page.tsx`), fetched once on submit and on manual refresh.
-- `GET {baseUrl}/api/v1/about/ethereum-rpc` (and `.../ethereum-tracing-rpc` if `ETHEREUM_TRACING_NODE_URL` is set) — RPC node status, polled every 10s via `setTimeout` chains (not `setInterval`) stored in `rpcFetchTimeoutRef`/`tracingRpcFetchTimeoutRef`.
-- `GET {baseUrl}/api/v1/about/indexing` — polled every 10s inside `components/IndexingStatus.tsx`, independently of the RPC polling above.
+All data comes from plain client-side `fetch` against the user-supplied base URL(s) — no API routes, no server aggregation. The target transaction service must allow CORS from the app's origin.
 
-All of this is plain client-side `fetch` with no backend/API routes and no persisted storage — state lives only in the page and in the `?url=` query param (used so a URL can be shared/bookmarked; see `sanitizeUrl`/`isValidUrl`/`handleShareUrl` in `app/page.tsx`). The target transaction service must allow CORS from the app's origin.
+### State lives in the URL, mirrored to localStorage
 
-### Type sharing runs backwards
+The `?url=` query string is the source of truth for what's rendered on `/` at any moment (so a dashboard link is always shareable/bookmarkable) — see `sanitizeUrl`/`isValidUrl`/`buildUrlsQuery` in `lib/service-url.ts`. `lib/tracked-services-storage.ts` mirrors that list to `localStorage` so it survives a restart: `/` bootstraps its query string from storage when loaded with no params, and every add/remove writes back.
 
-`components/IndexingStatus.tsx` imports the `CurrentData` type from `@/app/page` (`import { CurrentData } from "@/app/page"`) — the component depends on the page, not the other way around. Keep this in mind if you rename/move things in `app/page.tsx`; the compile error will surface in the component, not obviously in the page.
+Per-service *status* (ERC20/Master Copies sync %, speed, ETA, RPC state, last-updated timestamp) is separately cached in `localStorage` via `lib/service-status-cache.ts`, keyed by URL. Both `hooks/useServiceSummary.ts` (table row poller) and `components/IndexingStatus.tsx` + `app/service/page.tsx` (detail view) read/write the **same** cache entries (`mergeCachedServiceStatus`), so status learned by one view is visible in the other immediately on mount, instead of a blank "Loading..." every time a component remounts.
 
-### Indexing speed/ETA is recomputed from a rolling client-side buffer
+Row links to `/service` carry the rest of the tracked list as `from=` params (see `components/ServiceRow.tsx`) so `/service`'s "Back to Dashboard" button can reconstruct the full multi-service list — a bare `/service?url=X` link has no other way to know what else was being tracked.
 
-`components/IndexingStatus.tsx` keeps up to the last hour of polled snapshots in state (`data`, filtered by `ONE_HOUR`) and derives `erc20Speed`/`masterCopiesSpeed`/ETA and the speed-over-time chart data (Chart.js via `react-chartjs-2`) from that buffer (`calculateRollingSpeed`, `calculateGraphSpeeds`). A `STALL_THRESHOLD`-based check flags "stalled" indexing when the last 10 polls show no block progress. There is no server aggregation — refreshing the page resets the history.
+### Indexing speed/ETA: two independent implementations sharing the same math
+
+`components/IndexingStatus.tsx` (detail view) keeps up to the last hour of polled snapshots in state, filtered by `ONE_HOUR`, for its speed/ETA/chart data. `hooks/useServiceSummary.ts` (table row) keeps only a short `STALL_THRESHOLD`-sized ring buffer — it doesn't need chart history, just the current speed. Both call the same pure functions in `lib/indexing-metrics.ts` (`calculateRollingSpeed`, `calculateETA`) so the math itself isn't duplicated, only the buffer size differs.
 
 ### Sidebar section-highlighting is DOM-driven, not prop-driven
 
-`components/app-sidebar.tsx`'s `SidebarWrapper` detects which sections exist and which is active using `document.querySelectorAll`, a `MutationObserver`, and an `IntersectionObserver` against `<section id="...">` anchors in `app/page.tsx`, rather than receiving that state as props. It also stashes `hasActiveUrl`/`hasTracingRpc` as static properties on the `SidebarWrapper` function itself (`SidebarWrapper.hasActiveUrl = ...`) so `AppSidebar` (rendered separately for desktop) can read them. If you add/remove a scrollable section, update the `id` on the `<section>` in `app/page.tsx` and the corresponding `SidebarLink targetId` in `app/app-sidebar.tsx` together.
+`components/app-sidebar.tsx`'s `SidebarWrapper` detects which sections exist and which is active using `document.querySelectorAll`, a `MutationObserver`, and an `IntersectionObserver` against `<section id="...">` anchors, sharing that state (`activeSection`/`hasActiveUrl`/`hasTracingRpc`) via `MobileSidebarContext`. `SidebarWrapper` only wraps `/service` (the route with those anchors) — `/`'s table/form page renders without it. If you add/remove a scrollable section on `/service`, update the `id` on the `<section>` in `app/service/page.tsx` and the corresponding `SidebarLink targetId` in `components/app-sidebar.tsx` together.
+
+### Theming: light/dark via next-themes
+
+`app/globals.css` defines a light `:root` (default) and a `.dark` override block of CSS variables (`--background`, `--muted-foreground`, etc.), matching `tailwind.config.js`'s `darkMode: ["class"]`. `components/theme-provider.tsx` (wrapping `next-themes`) is mounted in `app/layout.tsx` with `defaultTheme="dark"` — the app's dark appearance is unchanged from before unless a user flips `components/theme-toggle.tsx`'s switch (in the `/` header and in `app-sidebar.tsx`'s footers).
+
+Structural colors (page/card backgrounds, borders, muted text) use the semantic classes (`bg-background`, `text-muted-foreground`, etc.). Everything else — the cyan/fuchsia/emerald/amber status-accent scheme, and Chart.js's line/gridline/tick colors in `components/IndexingStatus.tsx` (plain JS constants, not CSS, so they need `useTheme()` directly, guarded by a `mounted` flag to avoid a hydration mismatch) — is given an explicit `dark:`-prefixed pair per usage. When adding new UI, follow the same pattern: pick a light-mode value first, add the `dark:` variant matching today's existing dark palette, and check contrast (WCAG AA, 4.5:1) on both backgrounds rather than reusing a bright/dark-tuned shade as-is.
 
 ### UI components
 
-`components/ui/*` is a standard shadcn/ui set generated via `components.json` (style: default, base color: neutral, icon library: lucide). Path aliases (`@/components`, `@/lib`, `@/hooks`, `@/components/ui`) are defined both in `components.json` and `tsconfig.json`'s `@/*` mapping. Prefer extending `components/ui/*` primitives (Card, Button, Alert, Progress, Sidebar, etc.) over writing new raw markup.
+`components/ui/*` is a standard shadcn/ui set generated via `components.json` (style: default, base color: neutral, icon library: lucide). Path aliases (`@/components`, `@/lib`, `@/hooks`, `@/components/ui`) are defined both in `components.json` and `tsconfig.json`'s `@/*` mapping. Prefer extending `components/ui/*` primitives (Card, Button, Alert, Progress, Sidebar, Table, Switch, etc.) over writing new raw markup.
 
-Custom color utility classes (`bg-card-dark`, `border-card-dark`, `text-accent-blue`, `text-accent-cyan`) are hand-added at the bottom of `app/globals.css`, outside the standard shadcn CSS-variable theme — grep there before introducing a new one-off color class.
+Custom color utility classes (`bg-card-dark`, `border-card-dark`, `text-accent-blue`, `text-accent-cyan`) are hand-added at the bottom of `app/globals.css`, outside the standard shadcn CSS-variable theme — grep there before introducing a new one-off color class. They already carry `.dark`-scoped overrides following the theming convention above.

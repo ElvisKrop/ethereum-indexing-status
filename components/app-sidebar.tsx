@@ -14,6 +14,7 @@ import {
   SidebarProvider,
 } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 interface SidebarLinkProps {
   icon: React.ElementType
@@ -81,19 +82,21 @@ const SidebarLink = ({ icon: Icon, label, targetId, isActive, onClick }: Sidebar
           href={`#${targetId}`}
           className={`flex items-center gap-3 w-full px-3 py-2 relative transition-all duration-200 rounded-md ${
             isActive
-              ? "bg-cyan-900/30 text-cyan-300 font-medium"
-              : "hover:bg-slate-800/70 text-slate-400 hover:text-slate-200"
+              ? "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300 font-medium"
+              : "hover:bg-slate-100 text-slate-600 hover:text-slate-900 dark:hover:bg-slate-800/70 dark:text-slate-400 dark:hover:text-slate-200"
           }`}
         >
           <div
             className={`flex items-center justify-center w-10 h-10 rounded-md ${
-              isActive ? "bg-cyan-900/50 text-cyan-400" : "bg-slate-800/50 text-slate-500"
+              isActive
+                ? "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/50 dark:text-cyan-400"
+                : "bg-slate-100 text-slate-500 dark:bg-slate-800/50 dark:text-slate-500"
             }`}
           >
             <Icon className="h-5 w-5" />
           </div>
           <span>{label}</span>
-          {isActive && <span className="absolute inset-y-0 left-0 w-1 bg-cyan-400 rounded-r-sm" />}
+          {isActive && <span className="absolute inset-y-0 left-0 w-1 bg-cyan-600 dark:bg-cyan-400 rounded-r-sm" />}
         </a>
       </SidebarMenuButton>
     </SidebarMenuItem>
@@ -106,22 +109,22 @@ export function AppSidebar() {
 
   return (
     <Sidebar className="p-2">
-      <SidebarHeader className="border-b border-slate-800/50 rounded-lg bg-slate-800/20 mb-2">
+      <SidebarHeader className="border-b border-slate-200 dark:border-slate-800/50 rounded-lg bg-slate-100/70 dark:bg-slate-800/20 mb-2">
         <div className="flex items-center p-4">
           <div className="bg-blue-500 p-2.5 rounded-md mr-3 shadow-md">
             <LineChart className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h1 className="text-lg font-semibold text-white">Safe Indexing</h1>
-            <p className="text-xs text-cyan-500">Transaction Service Monitor</p>
+            <h1 className="text-lg font-semibold text-slate-900 dark:text-white">Safe Indexing</h1>
+            <p className="text-xs text-cyan-700 dark:text-cyan-500">Transaction Service Monitor</p>
           </div>
         </div>
       </SidebarHeader>
       <SidebarContent className="sticky top-0 px-2">
-        <div className="px-3 py-2 text-xs font-semibold text-cyan-600 uppercase tracking-wider">Navigation</div>
+        <div className="px-3 py-2 text-xs font-semibold text-cyan-700 dark:text-cyan-600 uppercase tracking-wider">Navigation</div>
         <SidebarMenu className="space-y-1">
           {!hasActiveUrl ? (
-            <div className="px-3 py-4 text-sm text-slate-400 bg-slate-800/20 rounded-md">
+            <div className="px-3 py-4 text-sm text-slate-600 dark:text-slate-400 bg-slate-100/70 dark:bg-slate-800/20 rounded-md">
               Enter a transaction service URL to view available sections
             </div>
           ) : (
@@ -162,8 +165,9 @@ export function AppSidebar() {
           )}
         </SidebarMenu>
       </SidebarContent>
-      <SidebarFooter className="border-t border-slate-800/50 p-4 mt-auto rounded-lg bg-slate-800/20">
-        <div className="text-xs text-slate-500">
+      <SidebarFooter className="border-t border-slate-200 dark:border-slate-800/50 p-4 mt-auto rounded-lg bg-slate-100/70 dark:bg-slate-800/20 space-y-3">
+        <ThemeToggle />
+        <div className="text-xs text-slate-600 dark:text-slate-400">
           <p>Blockchain Indexing Status</p>
           <p className="mt-1">© 2025 Protofire</p>
         </div>
@@ -177,7 +181,11 @@ export function MobileSidebarTrigger() {
 
   return (
     <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setOpenMobile(!openMobile)}>
-      {openMobile ? <X className="h-6 w-6 text-slate-400" /> : <Menu className="h-6 w-6 text-slate-400" />}
+      {openMobile ? (
+        <X className="h-6 w-6 text-slate-500 dark:text-slate-400" />
+      ) : (
+        <Menu className="h-6 w-6 text-slate-500 dark:text-slate-400" />
+      )}
       <span className="sr-only">Toggle Menu</span>
     </Button>
   )
@@ -288,33 +296,33 @@ export function SidebarWrapper({ children }: { children: React.ReactNode }) {
           >
             <div
               ref={sidebarRef}
-              className="fixed inset-y-0 left-0 z-50 w-full max-w-xs bg-slate-900 shadow-lg"
+              className="fixed inset-y-0 left-0 z-50 w-full max-w-xs bg-white dark:bg-slate-900 shadow-lg"
               onClick={(e) => e.stopPropagation()}
             >
               <SidebarProvider>
                 <div className="flex h-full flex-col p-2">
-                  <div className="flex items-center justify-between p-4 border-b border-slate-800/50 rounded-lg bg-slate-800/20 mb-2">
+                  <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800/50 rounded-lg bg-slate-100/70 dark:bg-slate-800/20 mb-2">
                     <div className="flex items-center">
                       <div className="bg-blue-500 p-2.5 rounded-md mr-3 shadow-md">
                         <LineChart className="h-5 w-5 text-white" />
                       </div>
                       <div>
-                        <h1 className="text-lg font-semibold text-white">Safe Indexing</h1>
-                        <p className="text-xs text-cyan-500">Transaction Service Monitor</p>
+                        <h1 className="text-lg font-semibold text-slate-900 dark:text-white">Safe Indexing</h1>
+                        <p className="text-xs text-cyan-700 dark:text-cyan-500">Transaction Service Monitor</p>
                       </div>
                     </div>
                     <Button variant="ghost" size="icon" onClick={() => setOpenMobile(false)}>
-                      <X className="h-5 w-5 text-slate-400" />
+                      <X className="h-5 w-5 text-slate-500 dark:text-slate-400" />
                       <span className="sr-only">Close</span>
                     </Button>
                   </div>
                   <div className="flex-1 overflow-auto py-2 px-2">
-                    <div className="px-3 py-2 text-xs font-semibold text-cyan-600 uppercase tracking-wider">
+                    <div className="px-3 py-2 text-xs font-semibold text-cyan-700 dark:text-cyan-600 uppercase tracking-wider">
                       Navigation
                     </div>
                     <SidebarMenu className="space-y-1">
                       {!hasActiveUrl ? (
-                        <div className="px-3 py-4 text-sm text-slate-400 bg-slate-800/20 rounded-md">
+                        <div className="px-3 py-4 text-sm text-slate-600 dark:text-slate-400 bg-slate-100/70 dark:bg-slate-800/20 rounded-md">
                           Enter a transaction service URL to view available sections
                         </div>
                       ) : (
@@ -355,8 +363,9 @@ export function SidebarWrapper({ children }: { children: React.ReactNode }) {
                       )}
                     </SidebarMenu>
                   </div>
-                  <div className="border-t border-slate-800/50 p-4 rounded-lg bg-slate-800/20">
-                    <div className="text-xs text-slate-500">
+                  <div className="border-t border-slate-200 dark:border-slate-800/50 p-4 rounded-lg bg-slate-100/70 dark:bg-slate-800/20 space-y-3">
+                    <ThemeToggle />
+                    <div className="text-xs text-slate-600 dark:text-slate-400">
                       <p>TxService Indexing Status</p>
                       <p className="mt-1">© 2026 Protofire</p>
                     </div>

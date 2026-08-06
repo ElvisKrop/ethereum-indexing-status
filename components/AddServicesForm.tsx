@@ -55,7 +55,7 @@ export default function AddServicesForm() {
 
   return (
     <section id="url-input">
-      <h2 className="text-2xl sm:text-3xl font-light text-center mb-6 text-sky-400 tracking-tight">
+      <h2 className="text-2xl sm:text-3xl font-light text-center mb-6 text-sky-700 dark:text-sky-400 tracking-tight">
         Track Transaction Service Indexing
       </h2>
       <div className="max-w-4xl mx-auto">
@@ -67,13 +67,13 @@ export default function AddServicesForm() {
                 placeholder="https://transaction-ethereum.safe.protofire.io"
                 value={url}
                 onChange={(e) => updateField(index, e.target.value)}
-                className="w-full bg-slate-800/50 text-white border-slate-700/50 focus:border-sky-500/50 focus:ring-sky-500/50 h-12 pl-4 pr-4 text-sm sm:text-base rounded-xl shadow-inner"
+                className="w-full bg-white text-slate-900 border-slate-300 focus:border-sky-600/50 focus:ring-sky-600/50 dark:bg-slate-800/50 dark:text-white dark:border-slate-700/50 dark:focus:border-sky-500/50 dark:focus:ring-sky-500/50 h-12 pl-4 pr-4 text-sm sm:text-base rounded-xl shadow-inner"
               />
               {urls.length > 1 && (
                 <button
                   type="button"
                   onClick={() => removeField(index)}
-                  className="text-slate-400 hover:text-white transition-colors px-1"
+                  className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors px-1"
                   aria-label="Remove field"
                 >
                   <XCircle className="h-5 w-5" />
@@ -87,7 +87,7 @@ export default function AddServicesForm() {
               type="button"
               variant="outline"
               onClick={addField}
-              className="border-slate-700/50 text-slate-300 hover:bg-slate-800/50 hover:text-white"
+              className="border-slate-300 text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700/50 dark:text-slate-300 dark:hover:bg-slate-800/50 dark:hover:text-white"
             >
               <Plus className="h-4 w-4 mr-1" /> Add another service
             </Button>
@@ -99,7 +99,7 @@ export default function AddServicesForm() {
             </Button>
           </div>
         </form>
-        {error && <div className="mt-3 text-red-400 text-sm">{error}</div>}
+        {error && <div className="mt-3 text-red-600 dark:text-red-400 text-sm">{error}</div>}
       </div>
     </section>
   )

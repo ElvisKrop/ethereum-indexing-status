@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
+import { useTheme } from "next-themes"
 import { Line } from "react-chartjs-2"
 import {
   CategoryScale,
@@ -55,20 +56,46 @@ const toIndexingData = (cached: CachedServiceStatus): IndexingData | null => {
 }
 
 export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatusProps) {
-  const [initialCache] = useState<CachedServiceStatus | null>(() => loadCachedServiceStatus(baseUrl))
+  const { resolvedTheme } = useTheme()
+  // Chart.js colors are plain JS, not CSS — they don't respond to the `dark`
+  // class automatically. Default to dark until mounted (matches
+  // ThemeProvider's defaultTheme="dark") to avoid a hydration mismatch.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+  const isDark = !mounted || resolvedTheme !== "light"
 
+  // Deliberately NOT seeded from the cache here: localStorage doesn't exist
+  // during SSR, so a lazy useState(() => loadCachedServiceStatus(...)) would
+  // render "no data" on the server and then find real cached data on the
+  // client's first render — a hydration mismatch. Cache hydration happens in
+  // the effect below instead, which only ever runs client-side post-mount.
   const [data, setData] = useState<IndexingData[]>([])
-  const [latestData, setLatestData] = useState<IndexingData | null>(() =>
-    initialCache ? toIndexingData(initialCache) : null,
-  )
-  const [erc20Speed, setErc20Speed] = useState<number>(initialCache?.erc20?.speed ?? 0)
-  const [masterCopiesSpeed, setMasterCopiesSpeed] = useState<number>(initialCache?.masterCopies?.speed ?? 0)
-  const [erc20ETA, setErc20ETA] = useState<string>(initialCache?.erc20?.eta ?? "N/A")
-  const [masterCopiesETA, setMasterCopiesETA] = useState<string>(initialCache?.masterCopies?.eta ?? "N/A")
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(
-    initialCache?.lastUpdated ? new Date(initialCache.lastUpdated) : null,
-  )
+  const [latestData, setLatestData] = useState<IndexingData | null>(null)
+  const [erc20Speed, setErc20Speed] = useState<number>(0)
+  const [masterCopiesSpeed, setMasterCopiesSpeed] = useState<number>(0)
+  const [erc20ETA, setErc20ETA] = useState<string>("N/A")
+  const [masterCopiesETA, setMasterCopiesETA] = useState<string>("N/A")
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const cached = loadCachedServiceStatus(baseUrl)
+    if (!cached) return
+
+    const cachedIndexingData = toIndexingData(cached)
+    if (cachedIndexingData) setLatestData(cachedIndexingData)
+    if (cached.erc20) {
+      setErc20Speed(cached.erc20.speed)
+      setErc20ETA(cached.erc20.eta)
+    }
+    if (cached.masterCopies) {
+      setMasterCopiesSpeed(cached.masterCopies.speed)
+      setMasterCopiesETA(cached.masterCopies.eta)
+    }
+    if (cached.lastUpdated) setLastUpdated(new Date(cached.lastUpdated))
+  }, [baseUrl])
   const [showErc20Warning, setShowErc20Warning] = useState(false)
   const [showMasterCopiesWarning, setShowMasterCopiesWarning] = useState(false)
   const [showErc20Chart, setShowErc20Chart] = useState(false)
@@ -247,25 +274,35 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
 
   const createChartData = (isERC20: boolean) => {
     const limitedData = graphSpeeds.slice(0, 30) // Limit to 30 points (5 minutes of data)
+    const lineColor = isDark
+      ? isERC20 ? "rgb(0, 255, 255)" : "rgb(255, 0, 255)"
+      : isERC20 ? "rgb(14, 116, 144)" : "rgb(162, 28, 175)"
+    const fillColor = isDark
+      ? isERC20 ? "rgba(0, 255, 255, 0.1)" : "rgba(255, 0, 255, 0.1)"
+      : isERC20 ? "rgba(14, 116, 144, 0.1)" : "rgba(162, 28, 175, 0.1)"
+
     return {
       labels: limitedData.map((entry) => formatTime(entry.timestamp)),
       datasets: [
         {
           label: isERC20 ? "ERC20 Indexing Speed" : "Master Copies Indexing Speed",
           data: limitedData.map((entry) => (isERC20 ? entry.erc20 : entry.masterCopies)),
-          borderColor: isERC20 ? "rgb(0, 255, 255)" : "rgb(255, 0, 255)",
-          backgroundColor: isERC20 ? "rgba(0, 255, 255, 0.1)" : "rgba(255, 0, 255, 0.1)",
+          borderColor: lineColor,
+          backgroundColor: fillColor,
           borderWidth: 2,
-          pointBackgroundColor: isERC20 ? "rgb(0, 255, 255)" : "rgb(255, 0, 255)",
-          pointBorderColor: isERC20 ? "rgb(0, 255, 255)" : "rgb(255, 0, 255)",
-          pointHoverBackgroundColor: "rgb(255, 255, 255)",
-          pointHoverBorderColor: isERC20 ? "rgb(0, 255, 255)" : "rgb(255, 0, 255)",
+          pointBackgroundColor: lineColor,
+          pointBorderColor: lineColor,
+          pointHoverBackgroundColor: isDark ? "rgb(255, 255, 255)" : "rgb(15, 23, 42)",
+          pointHoverBorderColor: lineColor,
           tension: 0.3,
           fill: true,
         },
       ],
     }
   }
+
+  const gridColor = isDark ? "rgba(200, 200, 200, 0.1)" : "rgba(15, 23, 42, 0.08)"
+  const tickColor = isDark ? "rgb(200, 200, 200)" : "rgb(71, 85, 105)"
 
   const chartOptions = {
     responsive: true,
@@ -277,10 +314,10 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
       tooltip: {
         mode: "index" as const,
         intersect: false,
-        backgroundColor: "rgba(0, 0, 0, 0.8)",
-        titleColor: "rgb(200, 200, 200)",
-        bodyColor: "rgb(200, 200, 200)",
-        borderColor: "rgba(200, 200, 200, 0.2)",
+        backgroundColor: isDark ? "rgba(0, 0, 0, 0.8)" : "rgba(255, 255, 255, 0.95)",
+        titleColor: isDark ? "rgb(200, 200, 200)" : "rgb(30, 41, 59)",
+        bodyColor: isDark ? "rgb(200, 200, 200)" : "rgb(30, 41, 59)",
+        borderColor: isDark ? "rgba(200, 200, 200, 0.2)" : "rgba(15, 23, 42, 0.15)",
         borderWidth: 1,
         padding: 12,
       },
@@ -289,11 +326,11 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
       y: {
         beginAtZero: true,
         grid: {
-          color: "rgba(200, 200, 200, 0.1)",
+          color: gridColor,
           drawBorder: false,
         },
         ticks: {
-          color: "rgb(200, 200, 200)",
+          color: tickColor,
           font: {
             size: 12,
           },
@@ -309,7 +346,7 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
           display: false,
         },
         ticks: {
-          color: "rgb(200, 200, 200)",
+          color: tickColor,
           font: {
             size: 12,
           },
@@ -366,12 +403,12 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
   if (!latestData) {
     if (error) {
       return (
-        <div className="text-center text-red-400 bg-red-900/20 border border-red-500/50 rounded-lg p-4">
+        <div className="text-center text-red-700 bg-red-50 border border-red-300 dark:text-red-400 dark:bg-red-900/20 dark:border-red-500/50 rounded-lg p-4">
           Failed to load indexing data: {error}
         </div>
       )
     }
-    return <div className="text-center text-blue-300 animate-pulse">Loading...</div>
+    return <div className="text-center text-blue-700 dark:text-blue-300 animate-pulse">Loading...</div>
   }
 
   const erc20Progress = (latestData.erc20BlockNumber / latestData.currentBlockNumber) * 100
@@ -379,35 +416,35 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
 
   const SyncedMessage = ({ type }: { type: "ERC20" | "Master Copies" }) => (
     <div className="flex items-center justify-center space-x-2 text-lg font-medium">
-      <CheckCircle className="w-6 h-6 text-green-500"/>
-      <span className="text-green-400">{type} tokens are fully synchronized with the latest block.</span>
+      <CheckCircle className="w-6 h-6 text-green-700 dark:text-green-500"/>
+      <span className="text-green-700 dark:text-green-400">{type} tokens are fully synchronized with the latest block.</span>
     </div>
   )
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="bg-blue-900/20 border border-blue-500/50 rounded-lg p-3 sm:p-4 flex items-start space-x-3">
-        <InfoIcon className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400 flex-shrink-0 mt-0.5"/>
-        <p className="text-xs sm:text-sm text-blue-200">
+      <div className="bg-blue-50 border border-blue-300 dark:bg-blue-900/20 dark:border-blue-500/50 rounded-lg p-3 sm:p-4 flex items-start space-x-3">
+        <InfoIcon className="w-5 h-5 sm:w-6 sm:h-6 text-blue-700 dark:text-blue-400 flex-shrink-0 mt-0.5"/>
+        <p className="text-xs sm:text-sm text-blue-900 dark:text-blue-200">
           Data is stored for the last hour only. Speeds and ETAs are calculated based on this time frame.
         </p>
       </div>
       {error && (
-        <div className="bg-amber-900/20 border border-amber-500/50 rounded-lg p-3 sm:p-4 flex items-start space-x-3">
-          <InfoIcon className="w-5 h-5 sm:w-6 sm:h-6 text-amber-400 flex-shrink-0 mt-0.5"/>
-          <p className="text-xs sm:text-sm text-amber-200">
+        <div className="bg-amber-50 border border-amber-300 dark:bg-amber-900/20 dark:border-amber-500/50 rounded-lg p-3 sm:p-4 flex items-start space-x-3">
+          <InfoIcon className="w-5 h-5 sm:w-6 sm:h-6 text-amber-700 dark:text-amber-400 flex-shrink-0 mt-0.5"/>
+          <p className="text-xs sm:text-sm text-amber-900 dark:text-amber-200">
             Last check failed, showing last known data: {error}
           </p>
         </div>
       )}
-      <Card className="bg-gray-900/50 border border-cyan-500/50 shadow-lg shadow-cyan-500/20">
+      <Card className="bg-white dark:bg-gray-900/50 border border-cyan-600/40 dark:border-cyan-500/50 shadow-lg shadow-cyan-200/50 dark:shadow-cyan-500/20">
         <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-4 sm:pb-2">
-          <CardTitle className="text-lg sm:text-xl text-cyan-300">ERC20 Synchronization</CardTitle>
+          <CardTitle className="text-lg sm:text-xl text-cyan-700 dark:text-cyan-300">ERC20 Synchronization</CardTitle>
           {lastUpdated && (
             <TimestampDisplay
               lastUpdated={lastUpdated}
               countdown={countdown}
-              className="bg-cyan-500/5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-cyan-400/90"
+              className="bg-cyan-500/5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-cyan-700 dark:text-cyan-400/90"
             />
           )}
         </CardHeader>
@@ -421,7 +458,7 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
                   onClick={toggleErc20Chart}
                   variant="outline"
                   size="sm"
-                  className="text-cyan-400 hover:text-cyan-300 hover:border-cyan-500 ml-auto flex items-center gap-2"
+                  className="text-cyan-700 hover:text-cyan-800 hover:border-cyan-600 dark:text-cyan-400 dark:hover:text-cyan-300 dark:hover:border-cyan-500 ml-auto flex items-center gap-2"
                 >
                   <LineChart className="h-4 w-4"/>
                   {showErc20Chart ? (
@@ -438,65 +475,65 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
                 </Button>
               </div>
               {!showErc20Chart && (
-                <p className="text-sm text-cyan-400/60 text-center mt-2">
+                <p className="text-sm text-cyan-700/70 dark:text-cyan-400/60 text-center mt-2">
                   Click the button above to view the historical indexing speed chart
                 </p>
               )}
               <div
-                className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-900/20 rounded-lg border border-gray-800/50">
+                className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4 p-3 sm:p-4 bg-slate-50 dark:bg-gray-900/20 rounded-lg border border-slate-200 dark:border-gray-800/50">
                 <div className="text-center group">
                   <div
-                    className="text-base sm:text-lg font-medium text-cyan-400/80 group-hover:text-cyan-400 transition-colors">
+                    className="text-base sm:text-lg font-medium text-cyan-700/80 group-hover:text-cyan-700 dark:text-cyan-400/80 dark:group-hover:text-cyan-400 transition-colors">
                     Blocks Left
                   </div>
-                  <div className="text-xl sm:text-3xl font-bold text-cyan-300 tabular-nums">
+                  <div className="text-xl sm:text-3xl font-bold text-cyan-800 dark:text-cyan-300 tabular-nums">
                     {(latestData.currentBlockNumber - latestData.erc20BlockNumber).toLocaleString()}
                   </div>
                 </div>
                 <div className="text-center group">
                   <div
-                    className="text-base sm:text-lg font-medium text-cyan-400/80 group-hover:text-cyan-400 transition-colors">
+                    className="text-base sm:text-lg font-medium text-cyan-700/80 group-hover:text-cyan-700 dark:text-cyan-400/80 dark:group-hover:text-cyan-400 transition-colors">
                     Current Speed
                   </div>
-                  <div className="text-xl sm:text-3xl font-bold text-cyan-300 tabular-nums">
+                  <div className="text-xl sm:text-3xl font-bold text-cyan-800 dark:text-cyan-300 tabular-nums">
                     {erc20Speed.toFixed(2)}
-                    <div className="text-sm text-cyan-400/80">blocks/minute</div>
+                    <div className="text-sm text-cyan-700/80 dark:text-cyan-400/80">blocks/minute</div>
                   </div>
                 </div>
                 <div className="text-center group">
                   <div
-                    className="text-base sm:text-lg font-medium text-cyan-400/80 group-hover:text-cyan-400 transition-colors">
+                    className="text-base sm:text-lg font-medium text-cyan-700/80 group-hover:text-cyan-700 dark:text-cyan-400/80 dark:group-hover:text-cyan-400 transition-colors">
                     Indexed Blocks
                   </div>
-                  <div className="text-xl sm:text-3xl font-bold text-cyan-300 tabular-nums">
+                  <div className="text-xl sm:text-3xl font-bold text-cyan-800 dark:text-cyan-300 tabular-nums">
                     {latestData.erc20BlockNumber.toLocaleString()}
                   </div>
                 </div>
                 <div className="text-center group">
                   <div
-                    className="text-base sm:text-lg font-medium text-cyan-400/80 group-hover:text-cyan-400 transition-colors">
+                    className="text-base sm:text-lg font-medium text-cyan-700/80 group-hover:text-cyan-700 dark:text-cyan-400/80 dark:group-hover:text-cyan-400 transition-colors">
                     Latest Block
                   </div>
-                  <div className="text-xl sm:text-3xl font-bold text-cyan-300 tabular-nums">
+                  <div className="text-xl sm:text-3xl font-bold text-cyan-800 dark:text-cyan-300 tabular-nums">
                     {latestData.currentBlockNumber.toLocaleString()}
                   </div>
                 </div>
                 <div className="text-center group">
                   <div
-                    className="text-base sm:text-lg font-medium text-cyan-400/80 group-hover:text-cyan-400 transition-colors">
+                    className="text-base sm:text-lg font-medium text-cyan-700/80 group-hover:text-cyan-700 dark:text-cyan-400/80 dark:group-hover:text-cyan-400 transition-colors">
                     ETA
                   </div>
-                  <div className="text-xl sm:text-3xl font-bold text-cyan-300 tabular-nums">{erc20ETA}</div>
+                  <div className="text-xl sm:text-3xl font-bold text-cyan-800 dark:text-cyan-300 tabular-nums">{erc20ETA}</div>
                 </div>
               </div>
               <Progress
                 value={erc20Progress}
-                className="h-2 bg-cyan-950/50"
+                className="h-2 bg-cyan-100 dark:bg-cyan-950/50"
                 indicatorClassName="bg-gradient-to-r from-cyan-500 to-cyan-400 animate-pulse"
               />
               {showErc20Warning && (
                 <div
-                  className="bg-amber-900/50 border border-amber-500/50 text-amber-200 px-4 py-2 rounded-md flex items-center">
+                  className="bg-amber-50 border border-amber-400 text-amber-900 dark:bg-amber-900/50 dark:border-amber-500/50 dark:text-amber-200 px-4 py-2 rounded-md flex items-center">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     className="h-5 w-5 mr-2"
@@ -517,7 +554,7 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
               )}
               {showErc20Chart && (
                 <div
-                  className="h-[250px] bg-gray-900/20 rounded-lg border border-gray-800/50 p-4 animate-in fade-in duration-500">
+                  className="h-[250px] bg-slate-50 dark:bg-gray-900/20 rounded-lg border border-slate-200 dark:border-gray-800/50 p-4 animate-in fade-in duration-500">
                   <Line data={createChartData(true)} options={chartOptions}/>
                 </div>
               )}
@@ -525,14 +562,14 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
           )}
         </CardContent>
       </Card>
-      <Card className="bg-gray-900/50 border border-fuchsia-500/50 shadow-lg shadow-fuchsia-500/20">
+      <Card className="bg-white dark:bg-gray-900/50 border border-fuchsia-600/40 dark:border-fuchsia-500/50 shadow-lg shadow-fuchsia-200/50 dark:shadow-fuchsia-500/20">
         <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-4 sm:pb-2">
-          <CardTitle className="text-lg sm:text-xl text-fuchsia-300">Master Copies Synchronization</CardTitle>
+          <CardTitle className="text-lg sm:text-xl text-fuchsia-700 dark:text-fuchsia-300">Master Copies Synchronization</CardTitle>
           {lastUpdated && (
             <TimestampDisplay
               lastUpdated={lastUpdated}
               countdown={countdown}
-              className="bg-fuchsia-500/5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-fuchsia-400/90"
+              className="bg-fuchsia-500/5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-fuchsia-700 dark:text-fuchsia-400/90"
             />
           )}
         </CardHeader>
@@ -546,7 +583,7 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
                   onClick={toggleMasterCopiesChart}
                   variant="outline"
                   size="sm"
-                  className="text-fuchsia-400 hover:text-fuchsia-300 hover:border-fuchsia-500 ml-auto flex items-center gap-2"
+                  className="text-fuchsia-700 hover:text-fuchsia-800 hover:border-fuchsia-600 dark:text-fuchsia-400 dark:hover:text-fuchsia-300 dark:hover:border-fuchsia-500 ml-auto flex items-center gap-2"
                 >
                   <LineChart className="h-4 w-4"/>
                   {showMasterCopiesChart ? (
@@ -563,65 +600,65 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
                 </Button>
               </div>
               {!showMasterCopiesChart && (
-                <p className="text-sm text-fuchsia-400/60 text-center mt-2">
+                <p className="text-sm text-fuchsia-700/70 dark:text-fuchsia-400/60 text-center mt-2">
                   Click the button above to view the historical indexing speed chart
                 </p>
               )}
               <div
-                className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-900/20 rounded-lg border border-gray-800/50">
+                className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4 p-3 sm:p-4 bg-slate-50 dark:bg-gray-900/20 rounded-lg border border-slate-200 dark:border-gray-800/50">
                 <div className="text-center group">
                   <div
-                    className="text-base sm:text-lg font-medium text-fuchsia-400/80 group-hover:text-fuchsia-400 transition-colors">
+                    className="text-base sm:text-lg font-medium text-fuchsia-700/80 group-hover:text-fuchsia-700 dark:text-fuchsia-400/80 dark:group-hover:text-fuchsia-400 transition-colors">
                     Blocks Left
                   </div>
-                  <div className="text-xl sm:text-3xl font-bold text-fuchsia-300 tabular-nums">
+                  <div className="text-xl sm:text-3xl font-bold text-fuchsia-800 dark:text-fuchsia-300 tabular-nums">
                     {(latestData.currentBlockNumber - latestData.masterCopiesBlockNumber).toLocaleString()}
                   </div>
                 </div>
                 <div className="text-center group">
                   <div
-                    className="text-base sm:text-lg font-medium text-fuchsia-400/80 group-hover:text-fuchsia-400 transition-colors">
+                    className="text-base sm:text-lg font-medium text-fuchsia-700/80 group-hover:text-fuchsia-700 dark:text-fuchsia-400/80 dark:group-hover:text-fuchsia-400 transition-colors">
                     Current Speed
                   </div>
-                  <div className="text-xl sm:text-3xl font-bold text-fuchsia-300 tabular-nums">
+                  <div className="text-xl sm:text-3xl font-bold text-fuchsia-800 dark:text-fuchsia-300 tabular-nums">
                     {masterCopiesSpeed.toFixed(2)}
-                    <div className="text-sm text-fuchsia-400/80">blocks/minute</div>
+                    <div className="text-sm text-fuchsia-700/80 dark:text-fuchsia-400/80">blocks/minute</div>
                   </div>
                 </div>
                 <div className="text-center group">
                   <div
-                    className="text-base sm:text-lg font-medium text-fuchsia-400/80 group-hover:text-fuchsia-400 transition-colors">
+                    className="text-base sm:text-lg font-medium text-fuchsia-700/80 group-hover:text-fuchsia-700 dark:text-fuchsia-400/80 dark:group-hover:text-fuchsia-400 transition-colors">
                     Indexed Blocks
                   </div>
-                  <div className="text-xl sm:text-3xl font-bold text-fuchsia-300 tabular-nums">
+                  <div className="text-xl sm:text-3xl font-bold text-fuchsia-800 dark:text-fuchsia-300 tabular-nums">
                     {latestData.masterCopiesBlockNumber.toLocaleString()}
                   </div>
                 </div>
                 <div className="text-center group">
                   <div
-                    className="text-base sm:text-lg font-medium text-fuchsia-400/80 group-hover:text-fuchsia-400 transition-colors">
+                    className="text-base sm:text-lg font-medium text-fuchsia-700/80 group-hover:text-fuchsia-700 dark:text-fuchsia-400/80 dark:group-hover:text-fuchsia-400 transition-colors">
                     Latest Block
                   </div>
-                  <div className="text-xl sm:text-3xl font-bold text-fuchsia-300 tabular-nums">
+                  <div className="text-xl sm:text-3xl font-bold text-fuchsia-800 dark:text-fuchsia-300 tabular-nums">
                     {latestData.currentBlockNumber.toLocaleString()}
                   </div>
                 </div>
                 <div className="text-center group">
                   <div
-                    className="text-base sm:text-lg font-medium text-fuchsia-400/80 group-hover:text-fuchsia-400 transition-colors">
+                    className="text-base sm:text-lg font-medium text-fuchsia-700/80 group-hover:text-fuchsia-700 dark:text-fuchsia-400/80 dark:group-hover:text-fuchsia-400 transition-colors">
                     ETA
                   </div>
-                  <div className="text-xl sm:text-3xl font-bold text-fuchsia-300 tabular-nums">{masterCopiesETA}</div>
+                  <div className="text-xl sm:text-3xl font-bold text-fuchsia-800 dark:text-fuchsia-300 tabular-nums">{masterCopiesETA}</div>
                 </div>
               </div>
               <Progress
                 value={masterCopiesProgress}
-                className="h-2 bg-fuchsia-950/50"
+                className="h-2 bg-fuchsia-100 dark:bg-fuchsia-950/50"
                 indicatorClassName="bg-gradient-to-r from-fuchsia-500 to-fuchsia-400 animate-pulse"
               />
               {showMasterCopiesWarning && (
                 <div
-                  className="bg-amber-900/50 border border-amber-500/50 text-amber-200 px-4 py-2 rounded-md flex items-center">
+                  className="bg-amber-50 border border-amber-400 text-amber-900 dark:bg-amber-900/50 dark:border-amber-500/50 dark:text-amber-200 px-4 py-2 rounded-md flex items-center">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     className="h-5 w-5 mr-2"
@@ -642,7 +679,7 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
               )}
               {showMasterCopiesChart && (
                 <div
-                  className="h-[250px] bg-gray-900/20 rounded-lg border border-gray-800/50 p-4 animate-in fade-in duration-500">
+                  className="h-[250px] bg-slate-50 dark:bg-gray-900/20 rounded-lg border border-slate-200 dark:border-gray-800/50 p-4 animate-in fade-in duration-500">
                   <Line data={createChartData(false)} options={chartOptions}/>
                 </div>
               )}

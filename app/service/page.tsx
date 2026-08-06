@@ -271,27 +271,27 @@ are based on recent performance and may not be indicative of future indexing spe
 
   if (!activeUrl) {
     return (
-      <div className="min-h-screen bg-[#0B1120] flex items-center justify-center">
-        <p className="text-blue-300 animate-pulse">Loading...</p>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-blue-700 dark:text-blue-300 animate-pulse">Loading...</p>
       </div>
     )
   }
 
   return (
     <SidebarWrapper>
-      <div className="min-h-screen bg-[#0B1120] text-white">
-        <div className="bg-slate-900/80 border-b border-slate-800/50 shadow-sm md:hidden">
+      <div className="min-h-screen bg-background text-foreground">
+        <div className="bg-white/80 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800/50 shadow-sm md:hidden">
           <div className="container mx-auto px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <MobileSidebarTrigger/>
-              <div className="h-6 w-px bg-slate-700/50"></div>
+              <div className="h-6 w-px bg-slate-300 dark:bg-slate-700/50"></div>
               <div className="flex items-center">
                 <div className="bg-blue-500 p-1.5 rounded-md shadow-sm">
                   <LineChart className="h-3.5 w-3.5 text-white"/>
                 </div>
               </div>
             </div>
-            <div className="text-xs text-slate-400 truncate max-w-[60%]">
+            <div className="text-xs text-slate-600 dark:text-slate-400 truncate max-w-[60%]">
               {aboutData ? getNetworkFromHost(aboutData.host) : "Transaction Service"}
             </div>
           </div>
@@ -299,13 +299,13 @@ are based on recent performance and may not be indicative of future indexing spe
         <main className="container mx-auto p-4">
           <Alert className="mb-6 bg-card-dark border-card-dark p-4" dismissible>
             <InfoIcon className="h-4 w-4 flex-shrink-0 text-accent-cyan"/>
-            <AlertDescription className="text-sm text-gray-400">
+            <AlertDescription className="text-sm text-slate-600 dark:text-gray-400">
               This app monitors real-time blockchain indexing status. No data is stored, and the app only works while
               this website is open.
             </AlertDescription>
           </Alert>
 
-          <Card className="overflow-hidden bg-slate-900/50 border-slate-800/50 shadow-xl backdrop-blur-xl">
+          <Card className="overflow-hidden bg-white/70 dark:bg-slate-900/50 border-slate-200/70 dark:border-slate-800/50 shadow-xl backdrop-blur-xl">
             <div className="p-4 sm:p-6">
               <section id="service-info" className="flex flex-col space-y-4">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -315,7 +315,7 @@ are based on recent performance and may not be indicative of future indexing spe
                   <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                     <Button
                       onClick={handleBackToDashboard}
-                      className="flex-1 sm:flex-none items-center space-x-2 bg-slate-700 hover:bg-slate-600 text-white rounded-md"
+                      className="flex-1 sm:flex-none items-center space-x-2 bg-slate-200 hover:bg-slate-300 text-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-white rounded-md"
                       size="sm"
                     >
                       <ArrowLeft className="h-4 w-4"/>
@@ -351,65 +351,65 @@ are based on recent performance and may not be indicative of future indexing spe
                 {aboutData && (
                   <div className="space-y-4 mt-4">
                     <div className="text-sm sm:text-base">
-                      <span className="font-semibold text-sky-400">Name:</span>{" "}
+                      <span className="font-semibold text-sky-700 dark:text-sky-400">Name:</span>{" "}
                       {`${getNetworkFromHost(aboutData.host)} ${aboutData.name} v${aboutData.version}`}
                     </div>
                     <div className="text-sm sm:text-base break-all">
-                      <span className="font-semibold text-sky-400">URL:</span>{" "}
+                      <span className="font-semibold text-sky-700 dark:text-sky-400">URL:</span>{" "}
                       <span className="font-mono text-xs sm:text-sm">{activeUrl}</span>
                     </div>
 
                     <div className="mt-6 p-4 bg-card-dark border border-card-dark rounded-lg" id="service-settings">
                       <h3 className="text-lg font-medium text-accent-cyan mb-4">Service Settings</h3>
                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                        <div className="bg-slate-900/40 p-3 rounded-md">
-                          <div className="text-xs text-gray-400">Block Process Limit</div>
-                          <div className="text-base font-medium text-white">
+                        <div className="bg-slate-100 dark:bg-slate-900/40 p-3 rounded-md">
+                          <div className="text-xs text-slate-600 dark:text-gray-400">Block Process Limit</div>
+                          <div className="text-base font-medium text-slate-900 dark:text-white">
                             {aboutData.settings.ETH_EVENTS_BLOCK_PROCESS_LIMIT}
                           </div>
                         </div>
 
-                        <div className="bg-slate-900/40 p-3 rounded-md">
-                          <div className="text-xs text-gray-400">Max Block Process Limit</div>
-                          <div className="text-base font-medium text-white">
+                        <div className="bg-slate-100 dark:bg-slate-900/40 p-3 rounded-md">
+                          <div className="text-xs text-slate-600 dark:text-gray-400">Max Block Process Limit</div>
+                          <div className="text-base font-medium text-slate-900 dark:text-white">
                             {aboutData.settings.ETH_EVENTS_BLOCK_PROCESS_LIMIT_MAX || "Not set"}
                           </div>
                         </div>
 
-                        <div className="bg-slate-900/40 p-3 rounded-md">
-                          <div className="text-xs text-gray-400">Query Chunk Size</div>
-                          <div className="text-base font-medium text-white">
+                        <div className="bg-slate-100 dark:bg-slate-900/40 p-3 rounded-md">
+                          <div className="text-xs text-slate-600 dark:text-gray-400">Query Chunk Size</div>
+                          <div className="text-base font-medium text-slate-900 dark:text-white">
                             {aboutData.settings.ETH_EVENTS_QUERY_CHUNK_SIZE}
                           </div>
                         </div>
 
-                        <div className="bg-slate-900/40 p-3 rounded-md">
-                          <div className="text-xs text-gray-400">Updated Block Behind</div>
-                          <div className="text-base font-medium text-white">
+                        <div className="bg-slate-100 dark:bg-slate-900/40 p-3 rounded-md">
+                          <div className="text-xs text-slate-600 dark:text-gray-400">Updated Block Behind</div>
+                          <div className="text-base font-medium text-slate-900 dark:text-white">
                             {aboutData.settings.ETH_EVENTS_UPDATED_BLOCK_BEHIND}
                           </div>
                         </div>
 
-                        <div className="bg-slate-900/40 p-3 rounded-md">
-                          <div className="text-xs text-gray-400">Internal TXs Block Process Limit</div>
-                          <div className="text-base font-medium text-white">
+                        <div className="bg-slate-100 dark:bg-slate-900/40 p-3 rounded-md">
+                          <div className="text-xs text-slate-600 dark:text-gray-400">Internal TXs Block Process Limit</div>
+                          <div className="text-base font-medium text-slate-900 dark:text-white">
                             {aboutData.settings.ETH_INTERNAL_TXS_BLOCK_PROCESS_LIMIT}
                           </div>
                         </div>
 
-                        <div className="bg-slate-900/40 p-3 rounded-md">
-                          <div className="text-xs text-gray-400">Reorg Blocks</div>
-                          <div className="text-base font-medium text-white">
+                        <div className="bg-slate-100 dark:bg-slate-900/40 p-3 rounded-md">
+                          <div className="text-xs text-slate-600 dark:text-gray-400">Reorg Blocks</div>
+                          <div className="text-base font-medium text-slate-900 dark:text-white">
                             {aboutData.settings.ETH_REORG_BLOCKS}
                           </div>
                         </div>
                       </div>
 
                       <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                        <div className="bg-slate-900/40 p-3 rounded-md flex items-center">
+                        <div className="bg-slate-100 dark:bg-slate-900/40 p-3 rounded-md flex items-center">
                           <div className="flex-1">
-                            <div className="text-xs text-gray-400">Internal No Filter</div>
-                            <div className="text-base font-medium text-white">
+                            <div className="text-xs text-slate-600 dark:text-gray-400">Internal No Filter</div>
+                            <div className="text-base font-medium text-slate-900 dark:text-white">
                               {aboutData.settings.ETH_INTERNAL_NO_FILTER ? "Enabled" : "Disabled"}
                             </div>
                           </div>
@@ -418,10 +418,10 @@ are based on recent performance and may not be indicative of future indexing spe
                           ></div>
                         </div>
 
-                        <div className="bg-slate-900/40 p-3 rounded-md flex items-center">
+                        <div className="bg-slate-100 dark:bg-slate-900/40 p-3 rounded-md flex items-center">
                           <div className="flex-1">
-                            <div className="text-xs text-gray-400">L2 Network</div>
-                            <div className="text-base font-medium text-white">
+                            <div className="text-xs text-slate-600 dark:text-gray-400">L2 Network</div>
+                            <div className="text-base font-medium text-slate-900 dark:text-white">
                               {aboutData.settings.ETH_L2_NETWORK ? "Yes" : "No"}
                             </div>
                           </div>
@@ -430,9 +430,9 @@ are based on recent performance and may not be indicative of future indexing spe
                           ></div>
                         </div>
 
-                        <div className="bg-slate-900/40 p-3 rounded-md">
-                          <div className="text-xs text-gray-400">Internal Trace TXs Batch Size</div>
-                          <div className="text-base font-medium text-white">
+                        <div className="bg-slate-100 dark:bg-slate-900/40 p-3 rounded-md">
+                          <div className="text-xs text-slate-600 dark:text-gray-400">Internal Trace TXs Batch Size</div>
+                          <div className="text-base font-medium text-slate-900 dark:text-white">
                             {aboutData.settings.ETH_INTERNAL_TRACE_TXS_BATCH_SIZE || "Not set"}
                           </div>
                         </div>
@@ -447,14 +447,14 @@ are based on recent performance and may not be indicative of future indexing spe
                           <h3 className="text-lg font-medium text-accent-cyan">RPC Status</h3>
                           {lastRpcFetched && (
                             <div className="flex items-center gap-2 ml-auto">
-                              <span className="text-xs text-gray-400">
+                              <span className="text-xs text-slate-600 dark:text-gray-400">
                                 Updated: {lastRpcFetched.toLocaleTimeString()}
                               </span>
                               <Button
                                 onClick={() => fetchEthereumRpcData(activeUrl)}
                                 size="sm"
                                 variant="ghost"
-                                className="h-6 w-6 p-0.5 hover:bg-blue-900/20"
+                                className="h-6 w-6 p-0.5 hover:bg-blue-100 dark:hover:bg-blue-900/20"
                               >
                                 <RefreshCw className="h-4 w-4 text-accent-cyan"/>
                               </Button>
@@ -472,25 +472,25 @@ are based on recent performance and may not be indicative of future indexing spe
                         )}
 
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                          <div className="bg-slate-900/40 p-3 rounded-md">
-                            <div className="text-xs text-gray-400">Chain</div>
-                            <div className="text-lg font-semibold text-white">
+                          <div className="bg-slate-100 dark:bg-slate-900/40 p-3 rounded-md">
+                            <div className="text-xs text-slate-600 dark:text-gray-400">Chain</div>
+                            <div className="text-lg font-semibold text-slate-900 dark:text-white">
                               {ethereumRpcData.chain}{" "}
-                              <span className="text-xs text-gray-400">ID: {ethereumRpcData.chain_id}</span>
+                              <span className="text-xs text-slate-600 dark:text-gray-400">ID: {ethereumRpcData.chain_id}</span>
                             </div>
                           </div>
 
-                          <div className="bg-slate-900/40 p-3 rounded-md">
-                            <div className="text-xs text-gray-400">Current Block</div>
-                            <div className="text-lg font-semibold text-white tabular-nums">
+                          <div className="bg-slate-100 dark:bg-slate-900/40 p-3 rounded-md">
+                            <div className="text-xs text-slate-600 dark:text-gray-400">Current Block</div>
+                            <div className="text-lg font-semibold text-slate-900 dark:text-white tabular-nums">
                               {ethereumRpcData.block_number.toLocaleString()}
                             </div>
                           </div>
 
-                          <div className="bg-slate-900/40 p-3 rounded-md">
-                            <div className="text-xs text-gray-400">Node Version</div>
+                          <div className="bg-slate-100 dark:bg-slate-900/40 p-3 rounded-md">
+                            <div className="text-xs text-slate-600 dark:text-gray-400">Node Version</div>
                             <div
-                              className="text-sm font-medium text-white truncate"
+                              className="text-sm font-medium text-slate-900 dark:text-white truncate"
                               title={ethereumRpcData.version}
                             >
                               {ethereumRpcData.version.split("/")[0]}/{ethereumRpcData.version.split("/")[1]}
@@ -503,7 +503,7 @@ are based on recent performance and may not be indicative of future indexing spe
                             className={`h-2 w-2 rounded-full mr-2 ${ethereumRpcData.syncing ? "bg-amber-500 animate-pulse" : "bg-emerald-500"}`}
                           ></div>
                           <span
-                            className={`text-sm ${ethereumRpcData.syncing ? "text-amber-400" : "text-emerald-400"}`}
+                            className={`text-sm ${ethereumRpcData.syncing ? "text-amber-700 dark:text-amber-400" : "text-emerald-700 dark:text-emerald-400"}`}
                           >
                             {ethereumRpcData.syncing ? "Node is syncing" : "Node is fully synced"}
                           </span>
@@ -518,20 +518,20 @@ are based on recent performance and may not be indicative of future indexing spe
                         className="mt-6 p-4 bg-card-dark border border-card-dark rounded-lg"
                       >
                         <div className="flex items-center gap-2 mb-3">
-                          <Server className="h-5 w-5 text-purple-400"/>
-                          <h3 className="text-lg font-medium text-purple-400">Tracing RPC Status</h3>
+                          <Server className="h-5 w-5 text-purple-700 dark:text-purple-400"/>
+                          <h3 className="text-lg font-medium text-purple-700 dark:text-purple-400">Tracing RPC Status</h3>
                           {lastTracingRpcFetched && (
                             <div className="flex items-center gap-2 ml-auto">
-                              <span className="text-xs text-gray-400">
+                              <span className="text-xs text-slate-600 dark:text-gray-400">
                                 Updated: {lastTracingRpcFetched.toLocaleTimeString()}
                               </span>
                               <Button
                                 onClick={() => fetchTracingRpcData(activeUrl)}
                                 size="sm"
                                 variant="ghost"
-                                className="h-6 w-6 p-0.5 hover:bg-purple-900/20"
+                                className="h-6 w-6 p-0.5 hover:bg-purple-100 dark:hover:bg-purple-900/20"
                               >
-                                <RefreshCw className="h-4 w-4 text-purple-400"/>
+                                <RefreshCw className="h-4 w-4 text-purple-700 dark:text-purple-400"/>
                               </Button>
                             </div>
                           )}
@@ -539,7 +539,7 @@ are based on recent performance and may not be indicative of future indexing spe
 
                         {aboutData?.settings?.ETHEREUM_TRACING_NODE_URL && (
                           <div className="mb-4 text-sm break-all">
-                            <span className="font-semibold text-purple-400">Tracing Provider URL:</span>{" "}
+                            <span className="font-semibold text-purple-700 dark:text-purple-400">Tracing Provider URL:</span>{" "}
                             <span className="font-mono text-xs">
                               {maskApiKey(aboutData.settings.ETHEREUM_TRACING_NODE_URL)}
                             </span>
@@ -547,24 +547,24 @@ are based on recent performance and may not be indicative of future indexing spe
                         )}
 
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                          <div className="bg-slate-900/40 p-3 rounded-md">
-                            <div className="text-xs text-gray-400">Chain</div>
-                            <div className="text-lg font-semibold text-white">
+                          <div className="bg-slate-100 dark:bg-slate-900/40 p-3 rounded-md">
+                            <div className="text-xs text-slate-600 dark:text-gray-400">Chain</div>
+                            <div className="text-lg font-semibold text-slate-900 dark:text-white">
                               {tracingRpcData.chain}{" "}
-                              <span className="text-xs text-gray-400">ID: {tracingRpcData.chain_id}</span>
+                              <span className="text-xs text-slate-600 dark:text-gray-400">ID: {tracingRpcData.chain_id}</span>
                             </div>
                           </div>
 
-                          <div className="bg-slate-900/40 p-3 rounded-md">
-                            <div className="text-xs text-gray-400">Current Block</div>
-                            <div className="text-lg font-semibold text-white tabular-nums">
+                          <div className="bg-slate-100 dark:bg-slate-900/40 p-3 rounded-md">
+                            <div className="text-xs text-slate-600 dark:text-gray-400">Current Block</div>
+                            <div className="text-lg font-semibold text-slate-900 dark:text-white tabular-nums">
                               {tracingRpcData.block_number.toLocaleString()}
                             </div>
                           </div>
 
-                          <div className="bg-slate-900/40 p-3 rounded-md">
-                            <div className="text-xs text-gray-400">Node Version</div>
-                            <div className="text-sm font-medium text-white truncate" title={tracingRpcData.version}>
+                          <div className="bg-slate-100 dark:bg-slate-900/40 p-3 rounded-md">
+                            <div className="text-xs text-slate-600 dark:text-gray-400">Node Version</div>
+                            <div className="text-sm font-medium text-slate-900 dark:text-white truncate" title={tracingRpcData.version}>
                               {tracingRpcData.version.split("/")[0]}/{tracingRpcData.version.split("/")[1]}
                             </div>
                           </div>
@@ -575,7 +575,7 @@ are based on recent performance and may not be indicative of future indexing spe
                             className={`h-2 w-2 rounded-full mr-2 ${tracingRpcData.syncing ? "bg-amber-500 animate-pulse" : "bg-emerald-500"}`}
                           ></div>
                           <span
-                            className={`text-sm ${tracingRpcData.syncing ? "text-amber-400" : "text-emerald-400"}`}
+                            className={`text-sm ${tracingRpcData.syncing ? "text-amber-700 dark:text-amber-400" : "text-emerald-700 dark:text-emerald-400"}`}
                           >
                             {tracingRpcData.syncing ? "Node is syncing" : "Node is fully synced"}
                           </span>
@@ -584,21 +584,21 @@ are based on recent performance and may not be indicative of future indexing spe
                     )}
 
                     {lastFetched && (
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-slate-600 dark:text-gray-400">
                         Service info last fetched: {lastFetched.toLocaleString()}
                       </div>
                     )}
                   </div>
                 )}
-                {error && <div className="mt-3 text-red-400 text-sm">{error}</div>}
+                {error && <div className="mt-3 text-red-600 dark:text-red-400 text-sm">{error}</div>}
               </section>
             </div>
           </Card>
 
           <section id="indexing-data" className="mt-6">
-            <Card className="bg-slate-900/50 border-slate-800/50 shadow-xl backdrop-blur-xl">
+            <Card className="bg-white/70 dark:bg-slate-900/50 border-slate-200/70 dark:border-slate-800/50 shadow-xl backdrop-blur-xl">
               <div className="p-4 sm:p-6">
-                <h2 className="text-2xl sm:text-3xl font-light text-center mb-6 text-sky-400 tracking-tight">
+                <h2 className="text-2xl sm:text-3xl font-light text-center mb-6 text-sky-700 dark:text-sky-400 tracking-tight">
                   Real-time Indexing Data
                 </h2>
                 <IndexingStatus baseUrl={activeUrl} onDataUpdate={handleDataUpdate}/>
