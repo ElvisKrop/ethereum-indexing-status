@@ -30,6 +30,14 @@ export const calculateRollingSpeed = (data: IndexingData[], isERC20: boolean) =>
   return blockDiff / timeDiff
 }
 
+// Clamped to [0, 100] — a transient lag between the indexing and RPC
+// endpoints can otherwise push blocksLeft slightly negative.
+export const calculateProgress = (blocksLeft: number, currentBlockNumber: number): number => {
+  if (currentBlockNumber <= 0) return 0
+  const indexed = currentBlockNumber - blocksLeft
+  return Math.min(100, Math.max(0, (indexed / currentBlockNumber) * 100))
+}
+
 export const calculateETA = (blocksLeft: number, speed: number): string => {
   if (speed <= 0) return "N/A"
 

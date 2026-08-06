@@ -3,10 +3,12 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
 import { TableCell, TableRow } from "@/components/ui/table"
 import { AlertTriangle, ArrowRight, X } from "lucide-react"
 import { useServiceSummary } from "@/hooks/useServiceSummary"
 import { buildUrlsQuery, getNetworkFromHost } from "@/lib/service-url"
+import { calculateProgress } from "@/lib/indexing-metrics"
 
 interface ServiceRowProps {
   url: string
@@ -30,6 +32,12 @@ export default function ServiceRow({ url, siblingUrls, onRemove }: ServiceRowPro
   const summary = useServiceSummary(url)
 
   const serviceName = summary.aboutData ? getNetworkFromHost(summary.aboutData.host) : null
+
+  const currentBlockNumber = summary.currentBlockNumber ?? 0
+  const erc20Progress = summary.erc20 ? calculateProgress(summary.erc20.blocksLeft, currentBlockNumber) : 0
+  const masterCopiesProgress = summary.masterCopies
+    ? calculateProgress(summary.masterCopies.blocksLeft, currentBlockNumber)
+    : 0
 
   // Carry the full dashboard list along so "Back to Dashboard" on the detail
   // page can restore it — a plain `/service?url=<this one>` link has no way
@@ -60,8 +68,18 @@ export default function ServiceRow({ url, siblingUrls, onRemove }: ServiceRowPro
         <>
           <TableCell>
             {summary.erc20 && (
-              <div className="space-y-1">
-                <SyncBadge synced={summary.erc20.synced} />
+              <div className="space-y-1 min-w-[130px]">
+                <div className="flex items-center justify-between gap-2">
+                  <SyncBadge synced={summary.erc20.synced} />
+                  <span className="text-xs font-medium tabular-nums text-slate-700 dark:text-slate-300">
+                    {erc20Progress.toFixed(1)}%
+                  </span>
+                </div>
+                <Progress
+                  value={erc20Progress}
+                  className="h-1.5 bg-cyan-100 dark:bg-cyan-950/50"
+                  indicatorClassName="bg-gradient-to-r from-cyan-500 to-cyan-400"
+                />
                 <div className="text-xs text-slate-600 dark:text-slate-400">
                   {summary.erc20.synced ? "Fully synced" : `${summary.erc20.speed.toFixed(1)} blocks/min`}
                 </div>
@@ -70,8 +88,18 @@ export default function ServiceRow({ url, siblingUrls, onRemove }: ServiceRowPro
           </TableCell>
           <TableCell>
             {summary.masterCopies && (
-              <div className="space-y-1">
-                <SyncBadge synced={summary.masterCopies.synced} />
+              <div className="space-y-1 min-w-[130px]">
+                <div className="flex items-center justify-between gap-2">
+                  <SyncBadge synced={summary.masterCopies.synced} />
+                  <span className="text-xs font-medium tabular-nums text-slate-700 dark:text-slate-300">
+                    {masterCopiesProgress.toFixed(1)}%
+                  </span>
+                </div>
+                <Progress
+                  value={masterCopiesProgress}
+                  className="h-1.5 bg-fuchsia-100 dark:bg-fuchsia-950/50"
+                  indicatorClassName="bg-gradient-to-r from-fuchsia-500 to-fuchsia-400"
+                />
                 <div className="text-xs text-slate-600 dark:text-slate-400">
                   {summary.masterCopies.synced ? "Fully synced" : `${summary.masterCopies.speed.toFixed(1)} blocks/min`}
                 </div>

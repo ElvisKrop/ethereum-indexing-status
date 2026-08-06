@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils"
 import { CurrentData } from "@/lib/types"
 import {
   calculateETA,
+  calculateProgress,
   calculateRollingSpeed,
   IndexingData,
   ONE_HOUR,
@@ -411,8 +412,14 @@ export default function IndexingStatus({ baseUrl, onDataUpdate }: IndexingStatus
     return <div className="text-center text-blue-700 dark:text-blue-300 animate-pulse">Loading...</div>
   }
 
-  const erc20Progress = (latestData.erc20BlockNumber / latestData.currentBlockNumber) * 100
-  const masterCopiesProgress = (latestData.masterCopiesBlockNumber / latestData.currentBlockNumber) * 100
+  const erc20Progress = calculateProgress(
+    latestData.currentBlockNumber - latestData.erc20BlockNumber,
+    latestData.currentBlockNumber,
+  )
+  const masterCopiesProgress = calculateProgress(
+    latestData.currentBlockNumber - latestData.masterCopiesBlockNumber,
+    latestData.currentBlockNumber,
+  )
 
   const SyncedMessage = ({ type }: { type: "ERC20" | "Master Copies" }) => (
     <div className="flex items-center justify-center space-x-2 text-lg font-medium">
